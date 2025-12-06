@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --bg-color: #050505;
+  --terminal-bg: rgba(20, 20, 25, 0.85);
+  --text-color: #e0e0e0;
+  --accent-color: #d4a017;
+  /* Gold/Amber for mystery */
+  --highlight-color: #ff4545;
+  /* Red for emphasis/murder */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  background-image: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000 100%);
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', monospace;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading Screen */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+}
+
+.loading-container h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  color: var(--accent-color);
+  margin-bottom: 2rem;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(212, 160, 23, 0.3);
+}
+
+.loading-steps p {
+  color: #888;
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
+  opacity: 0;
+  animation: fadeIn 1s forwards;
+}
+
+.fade-in-1 {
+  animation-delay: 0.5s;
+}
+
+.fade-in-2 {
+  animation-delay: 1.5s;
+}
+
+.fade-in-3 {
+  animation-delay: 2.5s;
+}
+
+.fade-in-4 {
+  animation-delay: 3.5s;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Terminal */
+.terminal-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  background: var(--terminal-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid #333;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+  margin: 2rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding-right: 1rem;
+}
+
+.terminal-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.terminal-line {
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.terminal-input-form {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #333;
+  padding-top: 1rem;
+}
+
+.prompt {
+  color: var(--accent-color);
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  flex: 1;
+  outline: none;
+}
