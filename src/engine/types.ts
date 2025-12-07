@@ -19,6 +19,7 @@ export interface StoryManifest {
     background: string;
     intro: string;
     plotAndSecrets?: string[];
+    characterSpecs?: { name: string; role: string; personality: string; }[];
 }
 
 export interface ScheduleEvent {

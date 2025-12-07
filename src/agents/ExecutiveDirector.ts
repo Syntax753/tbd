@@ -3,6 +3,7 @@ import { Writer } from './Writer';
 import { LocationScout } from './LocationScout';
 import { CastingDirector } from './CastingDirector';
 import { Scheduler } from './Scheduler';
+import type { AgentCard, Task } from '../engine/A2A';
 import type { GameState, Room, Character, StoryManifest } from '../engine/types';
 
 export class ExecutiveDirector extends Agent {
@@ -19,30 +20,59 @@ export class ExecutiveDirector extends Agent {
         this.scheduler = new Scheduler();
     }
 
+    get agentCard(): AgentCard {
+        return {
+            name: this.name,
+            role: this.role,
+            capabilities: ['orchestrate', 'fetch_info']
+        };
+    }
+
+    // A2A Router: Dispatch task to the right agent
+    async dispatch(task: Task): Promise<any> {
+        console.log(`Executive Director: Dispatching task [${task.type}]...`);
+
+        if (task.type === 'get_characters') {
+            return this.castingDirector.handleTask({ ...task, type: 'fetch_characters' });
+        }
+
+        if (task.type === 'get_story') {
+            return this.writer.handleTask({ ...task, type: 'get_story' });
+        }
+
+        if (task.type === 'get_schedule') {
+            return this.scheduler.handleTask({ ...task, type: 'get_schedule' });
+        }
+
+        return null;
+    }
+
     async work(): Promise<Partial<GameState>> {
         console.log("Executive Director: Starting production...");
 
-        // Phase 1: The Writer creates the story
-        console.log("Phase 1: Scripting");
-        const story = await this.writer.work();
+        // Phase 1: The Writer creates the story AND orchestrates the rest (A2A)
+        console.log("Phase 1: Commissioning the Writer...");
 
-        // Phase 2: Casting, Location, and Scheduling based on the story
-        console.log("Phase 2: Pre-production");
-        const [rooms, charactersList, schedule] = await Promise.all([
-            this.locationScout.work(), // In future, pass story
-            this.castingDirector.work(), // In future, pass story
-            this.scheduler.work(story)
-        ]);
+        // Executive Director passes the resources (Agents) to the Writer
+        const productionData = await this.writer.work({
+            locationScout: this.locationScout,
+            scheduler: this.scheduler,
+            castingDirector: this.castingDirector
+        });
+
+        const { story, map: rooms, characters: charactersList, schedule } = productionData;
 
         // Assemble the game state
         const map: Record<string, Room> = {};
-        rooms.forEach(room => {
+        // @ts-ignore
+        rooms.forEach((room: Room) => {
             map[room.id] = room;
         });
 
         const characters: Record<string, Character> = {};
-        charactersList.forEach(char => {
-            // Place everyone in the Foyer or Dining Room initially
+        // @ts-ignore
+        charactersList.forEach((char: Character) => {
+            // Place everyone in the Foyer initially (or respect schedule later)
             char.currentRoomId = 'foyer';
             characters[char.id] = char;
         });

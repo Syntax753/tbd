@@ -1,9 +1,18 @@
 import { Agent } from './Agent';
 import type { Room } from '../engine/types';
+import type { AgentCard } from '../engine/A2A';
 
 export class LocationScout extends Agent {
     constructor() {
         super('Sarah', 'Location Scout');
+    }
+
+    get agentCard(): AgentCard {
+        return {
+            name: this.name,
+            role: this.role,
+            capabilities: ['scout_location']
+        };
     }
 
     async work(): Promise<Room[]> {

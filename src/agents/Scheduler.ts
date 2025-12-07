@@ -1,34 +1,76 @@
 import { Agent } from './Agent';
 import type { Schedule, StoryManifest } from '../engine/types';
+import type { AgentCard, Task } from '../engine/A2A';
 
 export class Scheduler extends Agent {
+    private cachedSchedule: Schedule | null = null;
+
     constructor() {
         super('Clockwork', 'Scheduler');
     }
 
-    async work(story: StoryManifest): Promise<Schedule> {
+    get agentCard(): AgentCard {
+        return {
+            name: this.name,
+            role: this.role,
+            capabilities: ['generate_schedule', 'get_schedule']
+        };
+    }
+
+    async handleTask(task: Task): Promise<any> {
+        if (task.type === 'get_schedule') {
+            return this.cachedSchedule;
+        }
+        return null;
+    }
+
+    async work(story: StoryManifest, castingDirector?: any): Promise<Schedule> {
         // Simulating "scheduling" based on the story
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Hardcoded schedule for the prototype based on the "Dinner Party" theme
-        const schedule: Schedule = {
-            'guest_1': [
-                { time: '18:00', action: 'Arrives at the mansion', locationId: 'foyer' },
-                { time: '19:00', action: 'Drinks cocktails', locationId: 'living_room' },
-                { time: '20:00', action: 'Dinner is served', locationId: 'dining_room' }
-            ],
-            'guest_2': [
-                { time: '18:15', action: 'Arrives late and flustered', locationId: 'foyer' },
-                { time: '19:00', action: 'Gossip with others', locationId: 'living_room' },
-                { time: '20:00', action: 'Dinner is served', locationId: 'dining_room' }
-            ],
-            // Default for others
-            'default': [
-                { time: '19:00', action: 'Socializing', locationId: 'living_room' },
-                { time: '20:00', action: 'Dinner', locationId: 'dining_room' }
-            ]
-        };
+        let characters: any[] = [];
+        if (castingDirector) {
+            console.log("Scheduler: Querying Casting Director for talent list...");
+            characters = await castingDirector.getCast();
+        }
 
+        // Generate schedule for "The Clockwork Inheritance" dynamically if possible
+        const schedule: Schedule = {};
+
+        // If we have characters, map them!
+        if (characters.length > 0) {
+            const timeline = [
+                { time: '18:00', action: 'Arrives at Thorne Manor', locationId: 'foyer' },
+                { time: '19:00', action: 'Listens to the Will Announcement', locationId: 'living_room' },
+                { time: '20:00', action: 'Eats Dinner', locationId: 'dining_room' },
+                { time: '00:00', action: 'Reacts to the murder', locationId: 'dining_room' }
+            ];
+
+            characters.forEach(char => {
+                // Clone timeline
+                schedule[char.id] = JSON.parse(JSON.stringify(timeline));
+
+                // Customize a bit based on role
+                if (char.role === 'Butler') {
+                    schedule[char.id].push({ time: '22:30', action: 'Poisons the brandy', locationId: 'living_room' });
+                }
+                if (char.role === 'Spinster') {
+                    schedule[char.id].push({ time: '22:00', action: 'Hides the knitting needle', locationId: 'guest_corridor' });
+                }
+                if (char.role.includes('Victim')) {
+                    schedule[char.id] = [
+                        { time: '18:00', action: 'Greets guests', locationId: 'foyer' },
+                        { time: '19:00', action: 'Announces Will', locationId: 'living_room' },
+                        { time: '00:00', action: 'DIES', locationId: 'dining_room' }
+                    ];
+                }
+            });
+        } else {
+            // Fallback
+            schedule['default'] = [];
+        }
+
+        this.cachedSchedule = schedule;
         return schedule;
     }
 }

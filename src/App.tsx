@@ -29,13 +29,13 @@ function App() {
     initGame();
   }, [engine]);
 
-  const handleCommand = (cmd: string) => {
+  const handleCommand = async (cmd: string) => {
     // Optimistic update
     const newHistory = [...engine.getHistory(), `> ${cmd}`];
     setHistory(newHistory);
 
     // Process
-    engine.parseCommand(cmd);
+    await engine.parseCommand(cmd);
 
     // Update from engine state (single source of truth)
     setHistory([...engine.getHistory()]);

@@ -1,72 +1,52 @@
 import { Agent } from './Agent';
-import type { Character } from '../engine/types';
+import type { Character, StoryManifest } from '../engine/types';
+import type { AgentCard, Task } from '../engine/A2A';
 
 export class CastingDirector extends Agent {
+    private cast: Character[] = [];
+
     constructor() {
         super('Leo', 'Casting Director');
     }
 
-    async work(): Promise<Character[]> {
-        // Simulating "auditions"
-        await new Promise(resolve => setTimeout(resolve, 1200));
+    get agentCard(): AgentCard {
+        return {
+            name: this.name,
+            role: this.role,
+            capabilities: ['cast_characters', 'fetch_characters']
+        };
+    }
 
-        return [
-            {
-                id: 'guest_1',
-                name: 'General Sterling',
-                role: 'Guest',
-                bio: 'A retired military man with a stiff upper lip and a secretive past.',
-                personality: 'Stern, commanding, defensive.'
-            },
-            {
-                id: 'guest_2',
-                name: 'Madame LeBlanc',
-                role: 'Guest',
-                bio: 'A wealthy socialite who seems to know everyone\'s business.',
-                personality: 'Charming, gossipy, manipulative.'
-            },
-            {
-                id: 'guest_3',
-                name: 'Dr. Thorne',
-                role: 'Guest',
-                bio: 'A surgeon with shaky hands and a nervous tic.',
-                personality: 'Nervous, intellectual, evasive.'
-            },
-            {
-                id: 'guest_4',
-                name: 'Miss Vance',
-                role: 'Guest',
-                bio: 'A young actress looking for her big break.',
-                personality: 'Dramatic, emotional, ambitious.'
-            },
-            {
-                id: 'guest_5',
-                name: 'Baron Von Kessel',
-                role: 'Guest',
-                bio: 'A foreign dignitary with a scar on his cheek.',
-                personality: 'Cold, polite, mysterious.'
-            },
-            {
-                id: 'guest_6',
-                name: 'Father O\'Malley',
-                role: 'Guest',
-                bio: 'A priest who seems out of place in such luxury.',
-                personality: 'Humble, observant, moralizing.'
-            },
-            {
-                id: 'guest_7',
-                name: 'Professor Black',
-                role: 'Guest',
-                bio: 'An academic specializing in ancient history.',
-                personality: 'Absent-minded, curious, rambling.'
-            },
-            {
-                id: 'guest_8',
-                name: 'Lady Ashbury',
-                role: 'Guest',
-                bio: 'A widow wearing all black.',
-                personality: 'Melancholic, quiet, intense.'
-            }
-        ];
+    async handleTask(task: Task): Promise<any> {
+        if (task.type === 'fetch_characters') {
+            return this.getCast();
+        }
+        return null;
+    }
+
+    async work(story: StoryManifest): Promise<Character[]> {
+        console.log("Casting Director: Reviewing script and auditing auditions...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (story.characterSpecs) {
+            this.cast = story.characterSpecs.map((spec, index) => ({
+                id: `char_${index}_${spec.role.toLowerCase().replace(/ /g, '_')}`,
+                name: spec.name,
+                role: spec.role,
+                bio: `A ${spec.role} with a ${spec.personality} personality.`,
+                personality: spec.personality
+            }));
+        } else {
+            // Fallback if no specs provided
+            this.cast = [
+                { id: 'c1', name: 'Colonel Mustard', role: 'Soldier', bio: 'A dignified military man.', personality: 'Gruff' }
+            ];
+        }
+
+        return this.cast;
+    }
+
+    async getCast(): Promise<Character[]> {
+        return this.cast;
     }
 }

@@ -37,7 +37,7 @@ export class GameEngine {
         return this.state;
     }
 
-    parseCommand(input: string): string {
+    async parseCommand(input: string): Promise<string> {
         if (!this.isInitialized) return "The game is loading...";
 
         const cmd = input.trim().toLowerCase();
@@ -109,6 +109,24 @@ export class GameEngine {
                 lines.push("No schedule found.");
             }
             this.state.history.push(...lines);
+        } else if (cmd === 'characters') {
+            // A2A: Dispatch task to Executive Director
+            const result = await this.executive.dispatch({
+                id: 'cmd_chars',
+                type: 'get_characters',
+                status: 'submitted'
+            });
+
+            if (result && Array.isArray(result)) {
+                const lines = ["*** CAST LIST ***"];
+                // @ts-ignore
+                result.forEach((c: Character) => {
+                    lines.push(`${c.name} (${c.role}): ${c.bio}`);
+                });
+                this.state.history.push(...lines);
+            } else {
+                this.state.history.push("No characters found.");
+            }
         } else {
             response = "I don't understand that command.";
             this.state.history.push(response);
