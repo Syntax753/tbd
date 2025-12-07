@@ -18,6 +18,17 @@ export interface StoryManifest {
     title: string;
     background: string;
     intro: string;
+    plotAndSecrets?: string[];
+}
+
+export interface ScheduleEvent {
+    time: string; // e.g., "18:00"
+    action: string;
+    locationId: string;
+}
+
+export interface Schedule {
+    [characterId: string]: ScheduleEvent[];
 }
 
 export interface GameState {
@@ -25,6 +36,7 @@ export interface GameState {
     story: StoryManifest;
     map: Record<string, Room>;
     characters: Record<string, Character>;
+    schedule: Schedule;
     inventory: string[]; // Future
     history: string[]; // Log of text
 }

@@ -14,6 +14,7 @@ export class GameEngine {
             story: { title: '', background: '', intro: '' },
             map: {},
             characters: {},
+            schedule: {},
             inventory: [],
             history: []
         };
@@ -40,6 +41,8 @@ export class GameEngine {
         if (!this.isInitialized) return "The game is loading...";
 
         const cmd = input.trim().toLowerCase();
+        // Log input to history (unless it's a move command that clears it)
+        // Actually, we'll log it, and if handleMove clears it, so be it.
         this.state.history.push(`> ${input}`);
 
         let response = "";
@@ -47,25 +50,70 @@ export class GameEngine {
         const verb = parts[0];
         const noun = parts.slice(1).join(' ');
 
-        if (verb === 'look') {
+        // Shortcuts mapping
+        const shortcuts: { [key: string]: string } = {
+            'l': 'look',
+            'n': 'north',
+            's': 'south',
+            'e': 'east',
+            'w': 'west',
+            'u': 'up',
+            'd': 'down',
+            'i': 'inventory'
+        };
+
+        const actualVerb = shortcuts[verb] || verb;
+
+        if (actualVerb === 'look') {
             response = this.handleLook();
-        } else if (['north', 'south', 'east', 'west', 'up', 'down'].includes(verb)) {
-            response = this.handleMove(verb);
+            this.state.history.push(response);
+        } else if (['north', 'south', 'east', 'west', 'up', 'down'].includes(actualVerb)) {
+            response = this.handleMove(actualVerb);
+            // handleMove manages history clearing and pushing description
         } else if (verb === 'go' && noun) {
-            if (['north', 'south', 'east', 'west', 'up', 'down'].includes(noun)) {
-                response = this.handleMove(noun);
+            // Handle "go n" etc
+            const dir = shortcuts[noun] || noun;
+            if (['north', 'south', 'east', 'west', 'up', 'down'].includes(dir)) {
+                response = this.handleMove(dir);
             } else {
                 response = "You can't go that way.";
+                this.state.history.push(response);
             }
-        } else if (verb === 'talk') {
+        } else if (actualVerb === 'talk') {
             response = this.handleTalk(noun);
-        } else if (verb === 'help') {
-            response = "Available commands: look, north/south/east/west, talk <name>";
+            this.state.history.push(response);
+        } else if (cmd === 'help') {
+            response = "Available commands: look (l), north/south/east/west (n/s/e/w), talk <name>, story, schedule";
+            this.state.history.push(response);
+        } else if (cmd === 'story') {
+            const lines = [
+                "*** SECRET STORY ARCHIVE ***",
+                `TITLE: ${this.state.story.title}`,
+                `BACKGROUND: ${this.state.story.background}`,
+                "PLOT POINTS:",
+                ... (this.state.story.plotAndSecrets || ["No secrets found."])
+            ];
+            this.state.history.push(...lines);
+        } else if (cmd === 'schedule') {
+            const lines = ["*** CHARACTER SCHEDULES ***"];
+            if (this.state.schedule) {
+                Object.entries(this.state.schedule).forEach(([charId, events]) => {
+                    const charName = this.state.characters[charId]?.name || charId;
+                    lines.push(`[${charName}]`);
+                    events.forEach(e => {
+                        lines.push(`  ${e.time} - ${e.action} (@${e.locationId})`);
+                    });
+                    lines.push(""); // spacer
+                });
+            } else {
+                lines.push("No schedule found.");
+            }
+            this.state.history.push(...lines);
         } else {
             response = "I don't understand that command.";
+            this.state.history.push(response);
         }
 
-        this.state.history.push(response);
         return response;
     }
 
@@ -91,14 +139,27 @@ export class GameEngine {
 
     private handleMove(direction: string): string {
         const room = this.state.map[this.state.currentRoomId];
-        if (!room) return "You are lost.";
+        if (!room) {
+            const error = "You are lost.";
+            this.state.history.push(error);
+            return error;
+        }
 
         const nextRoomId = room.exits[direction];
         if (nextRoomId) {
             this.state.currentRoomId = nextRoomId;
-            return this.handleLook();
+
+            // Clear screen (history) because we moved
+            this.state.history = [];
+
+            // Get new description
+            const desc = this.handleLook();
+            this.state.history.push(desc);
+            return desc;
         } else {
-            return "You can't go that way.";
+            const error = "You can't go that way.";
+            this.state.history.push(error);
+            return error;
         }
     }
 

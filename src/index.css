@@ -37,9 +37,10 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-left: 2rem;
   height: 100%;
-  text-align: center;
+  text-align: left;
 }
 
 .loading-container h1 {
@@ -100,6 +101,8 @@ body {
   margin: 2rem;
   border-radius: 8px;
   overflow: hidden;
+  text-align: left;
+  align-items: flex-start;
 }
 
 .terminal-output {
@@ -121,6 +124,8 @@ body {
 .terminal-line {
   line-height: 1.6;
   font-size: 1.1rem;
+  text-align: left;
+  width: 100%;
 }
 
 .terminal-input-form {

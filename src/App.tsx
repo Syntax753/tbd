@@ -35,11 +35,10 @@ function App() {
     setHistory(newHistory);
 
     // Process
-    const response = engine.parseCommand(cmd);
+    engine.parseCommand(cmd);
 
-    // Update with response
-    // We update engine state internally, then re-fetch
-    setHistory([...newHistory, response]);
+    // Update from engine state (single source of truth)
+    setHistory([...engine.getHistory()]);
   };
 
   if (isLoading) {
