@@ -41,8 +41,11 @@ export class Writer extends Agent {
     }
 
     private async generateStoryFromLLM(): Promise<StoryManifest> {
-        // FOR TESTING: Force fallback story to save tokens/time
-        return this.getFallbackStory();
+        // TEST MODE: Force fallback story if VITE_USE_TEST_DATA is set
+        if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
+            console.log("Writer: Test Mode detected. Using fallback story.");
+            return this.getFallbackStory();
+        }
 
         if (!this.genAI) {
             return this.getFallbackStory();

@@ -13,7 +13,7 @@ export abstract class Agent {
     }
 
     // Legacy/Bootstrap method
-    abstract work(context?: any): Promise<any>;
+    abstract work(...args: any[]): Promise<any>;
 
     // A2A: Standardized task handler
     async handleTask(task: Task): Promise<any> {

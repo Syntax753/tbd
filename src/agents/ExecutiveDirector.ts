@@ -57,17 +57,17 @@ export class ExecutiveDirector extends Agent {
         console.log("Executive Director: 1. Commissioning Story...");
         const story = await this.writer.work();
 
-        console.log("Executive Director: 2. Scouting Location...");
-        // @ts-ignore
-        const rooms = await this.locationScout.work(story);
-
-        console.log("Executive Director: 3. Casting Characters...");
+        console.log("Executive Director: 2. Casting Characters...");
         // @ts-ignore
         const charactersList = await this.castingDirector.work(story);
 
+        console.log("Executive Director: 3. Scouting Location (based on cast)...");
+        // @ts-ignore
+        const rooms = await this.locationScout.work(story, charactersList);
+
         console.log("Executive Director: 4. Scheduling Events...");
         // @ts-ignore
-        const schedule = await this.scheduler.work(story, charactersList);
+        const schedule = await this.scheduler.work(story, charactersList, rooms);
 
 
 
