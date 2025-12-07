@@ -47,25 +47,36 @@ export class ExecutiveDirector extends Agent {
         return null;
     }
 
-    async work(): Promise<Partial<GameState>> {
+    async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {
         console.log("Executive Director: Starting production...");
 
         // Phase 1: The Writer creates the story AND orchestrates the rest (A2A)
         console.log("Phase 1: Commissioning the Writer...");
+        if (onProgress) onProgress("The Writer is drafting the plot...");
 
         // Executive Director runs the production pipeline sequentially
         console.log("Executive Director: 1. Commissioning Story...");
         const story = await this.writer.work();
 
         console.log("Executive Director: 2. Casting Characters...");
+        if (onProgress) onProgress("The Casting Director is hiring 8 suspects...");
         // @ts-ignore
         const charactersList = await this.castingDirector.work(story);
 
         console.log("Executive Director: 3. Scouting Location (based on cast)...");
+        if (onProgress) onProgress("The Location Scout is designing the manor...");
         // @ts-ignore
         const rooms = await this.locationScout.work(story, charactersList);
 
         console.log("Executive Director: 4. Scheduling Events...");
+        if (onProgress) onProgress("The Executive Director is setting the scene...");
+        // Note: User asked for "Executive Director setting scene" but maybe meant Scheduler doing scheduling?
+        // Actually the prompt said "The Executive Director is setting the scene... etc"
+        // Let's stick to the prompt's approximate text but maybe "Scheduler is scheduling..." is better?
+        // User's prompt: "The Executive Director is setting the scene..." -> maps to Scheduler step or final assembly?
+        // The prompt listing ended with "etc", but explicitly listed Executive Director setting scene.
+        // I will use "The Executive Director is setting the scene..." for the Scheduler/Finalizing step.
+
         // @ts-ignore
         const schedule = await this.scheduler.work(story, charactersList, rooms);
 

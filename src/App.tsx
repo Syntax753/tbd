@@ -7,6 +7,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 function App() {
   const [engine] = useState(() => new GameEngine());
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setIsLoadingMessage] = useState("Initializing...");
   const [history, setHistory] = useState<string[]>([]);
 
   // To verify if initialization has run
@@ -17,10 +18,8 @@ function App() {
     initialized.current = true;
 
     const initGame = async () => {
-      // Simulate min wait time for cinematic effect
-      const minWait = new Promise(res => setTimeout(res, 4000));
-
-      await Promise.all([engine.initialize(), minWait]);
+      // Pass callback to update loading message
+      await engine.initialize((msg) => setIsLoadingMessage(msg));
 
       setHistory(engine.getHistory());
       setIsLoading(false);
@@ -42,7 +41,7 @@ function App() {
   };
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen message={loadingMessage} />;
   }
 
   return (

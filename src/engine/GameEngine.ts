@@ -22,8 +22,8 @@ export class GameEngine {
         };
     }
 
-    async initialize(): Promise<void> {
-        const partialState = await this.executive.work();
+    async initialize(onProgress?: (msg: string) => void): Promise<void> {
+        const partialState = await this.executive.work(onProgress);
         this.state = {
             ...this.state,
             ...partialState,
