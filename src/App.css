@@ -40,3 +40,14 @@
 .read-the-docs {
   color: #888;
 }
+
+.clock {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    font-size: 2rem;
+    color: #0f0;
+    text-shadow: 0 0 10px #0f0;
+    font-family: 'Courier New', Courier, monospace;
+    z-index: 100;
+}

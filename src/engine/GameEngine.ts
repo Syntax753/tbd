@@ -1,4 +1,4 @@
-import type { GameState, Room, Character } from './types';
+import type { GameState, Character } from './types';
 import { ExecutiveDirector } from '../agents/ExecutiveDirector';
 
 export class GameEngine {
@@ -16,7 +16,9 @@ export class GameEngine {
             characters: {},
             schedule: {},
             inventory: [],
-            history: []
+            history: [],
+            time: "18:00",
+            isGameOver: false
         };
     }
 
@@ -24,7 +26,9 @@ export class GameEngine {
         const partialState = await this.executive.work();
         this.state = {
             ...this.state,
-            ...partialState
+            ...partialState,
+            time: "18:00",
+            isGameOver: false
         };
         this.isInitialized = true;
     }
@@ -39,10 +43,9 @@ export class GameEngine {
 
     async parseCommand(input: string): Promise<string> {
         if (!this.isInitialized) return "The game is loading...";
+        if (this.state.isGameOver) return "The game is over. Archibald is dead.";
 
         const cmd = input.trim().toLowerCase();
-        // Log input to history (unless it's a move command that clears it)
-        // Actually, we'll log it, and if handleMove clears it, so be it.
         this.state.history.push(`> ${input}`);
 
         let response = "";
@@ -69,9 +72,7 @@ export class GameEngine {
             this.state.history.push(response);
         } else if (['north', 'south', 'east', 'west', 'up', 'down'].includes(actualVerb)) {
             response = this.handleMove(actualVerb);
-            // handleMove manages history clearing and pushing description
         } else if (verb === 'go' && noun) {
-            // Handle "go n" etc
             const dir = shortcuts[noun] || noun;
             if (['north', 'south', 'east', 'west', 'up', 'down'].includes(dir)) {
                 response = this.handleMove(dir);
@@ -167,6 +168,15 @@ export class GameEngine {
         if (nextRoomId) {
             this.state.currentRoomId = nextRoomId;
 
+            // Advance time by 1 minute for movement
+            this.advanceTime(1);
+
+            if (this.state.isGameOver) {
+                const msg = "MIDNIGHT: Archibald is found dead! Game Over.";
+                this.state.history.push(msg);
+                return msg;
+            }
+
             // Clear screen (history) because we moved
             this.state.history = [];
 
@@ -194,6 +204,71 @@ export class GameEngine {
             return "You don't see them here.";
         }
 
+        // Advance time by 5 minutes for talking
+        this.advanceTime(5);
+        if (this.state.isGameOver) {
+            const msg = "MIDNIGHT: Archibald is found dead! Game Over.";
+            return msg;
+        }
+
         return `${target.name} says: "I didn't do it! I swear!" (${target.personality})`;
+    }
+
+    private advanceTime(minutes: number) {
+        if (!this.state.time) return;
+
+        const [currH, currM] = this.state.time.split(':').map(Number);
+        let totalMinutes = currH * 60 + currM;
+        totalMinutes += minutes;
+
+        // Check for midnight (00:00 or 24:00)
+        // Start is 18:00 (1080 min). Midnight is 1440 min (24 * 60).
+        if (totalMinutes >= 24 * 60) {
+            this.state.time = "00:00";
+            this.state.isGameOver = true;
+            return;
+        }
+
+        const newH = Math.floor(totalMinutes / 60) % 24;
+        const newM = totalMinutes % 60;
+        this.state.time = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+
+        this.updateCharacterLocations();
+    }
+
+    private updateCharacterLocations() {
+        if (!this.state.schedule) return;
+
+        // "Query" the scheduler (using cached schedule for now)
+        Object.entries(this.state.schedule).forEach(([charId, events]) => {
+            const char = this.state.characters[charId];
+            if (!char) return;
+
+            // Find the latest event that has happened
+            // Sort events by time just in case
+            // events.sort... (assuming sorted for now)
+
+            // Simple logic: find the event with the largest time <= current time
+            let currentLocation = char.currentRoomId;
+            const currentTotal = this.timeToMinutes(this.state.time);
+
+            for (const event of events) {
+                const eventTotal = this.timeToMinutes(event.time);
+                if (eventTotal <= currentTotal) {
+                    currentLocation = event.locationId;
+                }
+            }
+
+            if (currentLocation && currentLocation !== char.currentRoomId) {
+                char.currentRoomId = currentLocation;
+            }
+        });
+    }
+
+    private timeToMinutes(timeStr: string): number {
+        const [h, m] = timeStr.split(':').map(Number);
+        // Handle midnight as 24:00 for comparison if needed, but our logic uses 00:00 as end
+        if (h === 0 && m === 0) return 24 * 60;
+        return h * 60 + m;
     }
 }

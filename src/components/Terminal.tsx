@@ -2,16 +2,30 @@ import React, { useState, useEffect, useRef } from 'react';
 
 interface TerminalProps {
     history: string[];
+    time?: string;
     onCommand: (cmd: string) => void;
 }
 
-export const Terminal: React.FC<TerminalProps> = ({ history, onCommand }) => {
+export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) => {
     const [input, setInput] = useState('');
     const endRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [history]);
+
+    // Auto-focus input on click anywhere, unless selecting text
+    useEffect(() => {
+        const handleGlobalClick = () => {
+            const selection = window.getSelection();
+            if (selection && selection.toString().length > 0) return;
+            inputRef.current?.focus();
+        };
+
+        window.addEventListener('click', handleGlobalClick);
+        return () => window.removeEventListener('click', handleGlobalClick);
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,6 +36,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, onCommand }) => {
 
     return (
         <div className="terminal-container">
+            {time && <div className="clock">{time}</div>}
             <div className="terminal-output">
                 {history.map((line, index) => (
                     <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
@@ -33,6 +48,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, onCommand }) => {
             <form onSubmit={handleSubmit} className="terminal-input-form">
                 <span className="prompt">{'>'}</span>
                 <input
+                    ref={inputRef}
                     autoFocus
                     type="text"
                     value={input}

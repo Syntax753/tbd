@@ -24,15 +24,11 @@ export class Scheduler extends Agent {
         return null;
     }
 
-    async work(story: StoryManifest, castingDirector?: any): Promise<Schedule> {
+    async work(story: StoryManifest, characters: any[]): Promise<Schedule> {
         // Simulating "scheduling" based on the story
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        let characters: any[] = [];
-        if (castingDirector) {
-            console.log("Scheduler: Querying Casting Director for talent list...");
-            characters = await castingDirector.getCast();
-        }
+        console.log("Scheduler: Creating schedule for cast...");
 
         // Generate schedule for "The Clockwork Inheritance" dynamically if possible
         const schedule: Schedule = {};

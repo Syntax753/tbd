@@ -1,9 +1,21 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Agent } from './Agent';
 import type { StoryManifest } from '../engine/types';
 import type { AgentCard, Task } from '../engine/A2A';
 
 export class Writer extends Agent {
     private cachedStory: StoryManifest | null = null;
+    private genAI: GoogleGenerativeAI | null = null;
+
+    constructor() {
+        super('Arthur', 'Writer');
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (apiKey) {
+            this.genAI = new GoogleGenerativeAI(apiKey);
+        } else {
+            console.warn("Writer: No Gemini API Key found. Using fallback story.");
+        }
+    }
 
     async handleTask(task: Task): Promise<any> {
         if (task.type === 'get_story' || task.type === 'get_story_context') {
@@ -21,41 +33,60 @@ export class Writer extends Agent {
         };
     }
 
-    constructor() {
-        super('Arthur', 'Writer');
-    }
-
-    async work(services: {
-        locationScout: Agent,
-        scheduler: Agent,
-        castingDirector: Agent
-    }): Promise<{ story: StoryManifest, map: any, characters: any, schedule: any }> {
+    async work(): Promise<StoryManifest> {
         console.log("Writer: Consulting the digital muse (LLM)...");
         const story = await this.generateStoryFromLLM();
         this.cachedStory = story;
-
-        console.log("Writer: Orchestrating production (A2A)...");
-        // A2A Protocol: Writer calls the other agents directly
-        const [map, characters, schedule] = await Promise.all([
-            // @ts-ignore - We know the types at runtime for this prototype
-            services.locationScout.work(story),
-            // @ts-ignore
-            services.castingDirector.work(story),
-            // @ts-ignore
-            services.scheduler.work(story)
-        ]);
-
-        return { story, map, characters, schedule };
+        return story;
     }
 
     private async generateStoryFromLLM(): Promise<StoryManifest> {
-        // Simulating network latency for the "AI"
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // FOR TESTING: Force fallback story to save tokens/time
+        return this.getFallbackStory();
 
+        if (!this.genAI) {
+            return this.getFallbackStory();
+        }
+
+        try {
+            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `
+                You are a mystery writer. Create a murder mystery story manifest for a text adventure game.
+                The setting is a mansion.
+                The host, Archibald Thorne, is found dead at midnight.
+                The game starts at 18:00.
+                
+                Respond ONLY with valid JSON matching this interface:
+                interface StoryManifest {
+                    title: string;
+                    background: string; // Context before game starts
+                    intro: string; // The text shown when the game starts
+                    plotAndSecrets: string[]; // Timeline of events and the solution
+                    characterSpecs: { name: string; role: string; personality: string; }[]; // List of 7-8 characters including the victim
+                }
+            `;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            // Cleanup markdown code blocks if present
+            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            const story = JSON.parse(cleanText) as StoryManifest;
+            return story;
+
+        } catch (error) {
+            console.error("Writer: Failed to generate story from Gemini.", error);
+            return this.getFallbackStory();
+        }
+    }
+
+    private getFallbackStory(): StoryManifest {
         return {
             title: "The Clockwork Inheritance",
-            background: "You represent the law, but even you were surprised by the invitation. Archibald Thorne, a recluse known for his eccentric mechanical inventions, invited you to Thorne Manor for 'an evening of unique Entertainment'. You arrived at 6:00 PM, joining a cast of colorful strangers, none of whom knew why they were really there.",
-            intro: "The grandfather clock strikes Midnight. A blood-curdling scream shatters the silence of the mansion. You rush to the Dining Room to find Archibald Thorne dead, slumped over his unfinished dessert. He was alive at 6:00 PM when the guests arrived, confused and wary. He was alive at 8:00 PM when Dinner was served with a side of cryptic insults. But now, the 'Entertainment' has taken a dark turn. You must determine who among these 7 strangers turned this game into a murder.",
+            background: "You are a free-lance detective. You received a mysterious invite to attend a dinner party by the wealthy Acrhibald Thorne.",
+            intro: "Archibald Thorne, a reclusive and immensely wealthy industrialist, invited a select group of family, close associates, and specialists to his sprawling, enigmatic Thorne Manor for a weekend gathering. The stated purpose was a 'celebration of life and legacy,' but rumors abounded that Archibald, known for his eccentricities and failing health, intended to make a significant announcement regarding his vast fortune and controversial will. The manor itself is a character, with its labyrinthine corridors, hidden passages, and a history as rich and shadowy as its owner's past. Guests arrived expecting revelations, but none could have foreseen the tragic events that would unfold.",
             plotAndSecrets: [
                 "*** CHRONICLE OF THE NIGHT ***",
                 "18:00 - Guests arrive. The mysterious invitations are compared.",

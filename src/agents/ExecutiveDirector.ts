@@ -4,7 +4,7 @@ import { LocationScout } from './LocationScout';
 import { CastingDirector } from './CastingDirector';
 import { Scheduler } from './Scheduler';
 import type { AgentCard, Task } from '../engine/A2A';
-import type { GameState, Room, Character, StoryManifest } from '../engine/types';
+import type { GameState, Room, Character } from '../engine/types';
 
 export class ExecutiveDirector extends Agent {
     private writer: Writer;
@@ -53,14 +53,24 @@ export class ExecutiveDirector extends Agent {
         // Phase 1: The Writer creates the story AND orchestrates the rest (A2A)
         console.log("Phase 1: Commissioning the Writer...");
 
-        // Executive Director passes the resources (Agents) to the Writer
-        const productionData = await this.writer.work({
-            locationScout: this.locationScout,
-            scheduler: this.scheduler,
-            castingDirector: this.castingDirector
-        });
+        // Executive Director runs the production pipeline sequentially
+        console.log("Executive Director: 1. Commissioning Story...");
+        const story = await this.writer.work();
 
-        const { story, map: rooms, characters: charactersList, schedule } = productionData;
+        console.log("Executive Director: 2. Scouting Location...");
+        // @ts-ignore
+        const rooms = await this.locationScout.work(story);
+
+        console.log("Executive Director: 3. Casting Characters...");
+        // @ts-ignore
+        const charactersList = await this.castingDirector.work(story);
+
+        console.log("Executive Director: 4. Scheduling Events...");
+        // @ts-ignore
+        const schedule = await this.scheduler.work(story, charactersList);
+
+
+
 
         // Assemble the game state
         const map: Record<string, Room> = {};

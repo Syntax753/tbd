@@ -48,6 +48,7 @@ function App() {
   return (
     <Terminal
       history={history}
+      time={engine.getState().time}
       onCommand={handleCommand}
     />
   );

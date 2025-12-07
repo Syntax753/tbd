@@ -40,4 +40,6 @@ export interface GameState {
     schedule: Schedule;
     inventory: string[]; // Future
     history: string[]; // Log of text
+    time: string; // e.g. "18:00"
+    isGameOver: boolean;
 }

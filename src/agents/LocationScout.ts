@@ -15,7 +15,7 @@ export class LocationScout extends Agent {
         };
     }
 
-    async work(): Promise<Room[]> {
+    async work(story?: any): Promise<Room[]> {
         // Simulating "scouting"
         await new Promise(resolve => setTimeout(resolve, 1500));
 
