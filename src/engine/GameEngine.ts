@@ -84,8 +84,23 @@ export class GameEngine {
             response = this.handleTalk(noun);
             this.state.history.push(response);
         } else if (cmd === 'help') {
-            response = "Available commands: look (l), north/south/east/west (n/s/e/w), talk <name>, story, schedule";
-            this.state.history.push(response);
+            const lines = [
+                "*** AVAILABLE COMMANDS ***",
+                "  look (l)         - Examine your surroundings",
+                "  north (n)        - Move North",
+                "  south (s)        - Move South",
+                "  east (e)         - Move East",
+                "  west (w)         - Move West",
+                "  up (u)           - Move Up",
+                "  down (d)         - Move Down",
+                "  talk <name>      - Talk to a character",
+                "  inventory (i)    - Check your inventory",
+                "  story            - Review the story so far",
+                "  schedule         - (Debug) View character schedules",
+                "  characters       - (Debug) View character bios",
+                "  help             - Show this message"
+            ];
+            this.state.history.push(...lines);
         } else if (cmd === 'story') {
             const lines = [
                 "*** SECRET STORY ARCHIVE ***",
