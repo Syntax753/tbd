@@ -95,11 +95,23 @@ export class GameEngine {
                 "  down (d)         - Move Down",
                 "  talk <name>      - Talk to a character",
                 "  inventory (i)    - Check your inventory",
+                "  location (map)   - List all rooms and connections",
                 "  story            - Review the story so far",
                 "  schedule         - (Debug) View character schedules",
                 "  characters       - (Debug) View character bios",
                 "  help             - Show this message"
             ];
+            this.state.history.push(...lines);
+        } else if (cmd === 'location' || cmd === 'map') {
+            const lines = ["*** MANSION LAYOUT ***"];
+            Object.values(this.state.map).forEach(room => {
+                lines.push(`[${room.name}] (${room.id})`);
+                Object.entries(room.exits).forEach(([dir, targetId]) => {
+                    const targetName = this.state.map[targetId]?.name || targetId;
+                    lines.push(`  -> ${dir.toUpperCase()}: ${targetName}`);
+                });
+                lines.push(""); // spacer
+            });
             this.state.history.push(...lines);
         } else if (cmd === 'story') {
             const lines = [
