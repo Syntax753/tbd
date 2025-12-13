@@ -43,8 +43,24 @@ export class Scheduler extends Agent {
 
         console.log("Scheduler: Creating schedule for cast...");
 
-        // Base schedule (Pre-Dinner)
+        // Base schedule
         const schedule: Schedule = {};
+
+        // TEST MODE: Use simplified schedule without dinner/murder
+        if (useTestData) {
+            console.log("Scheduler -> TestData (Test Mode - No Dinner/Murder)");
+            const testSchedule = this.getTestSchedule();
+
+            // Use test schedule directly (already starts everyone in foyer)
+            Object.entries(testSchedule).forEach(([charId, events]) => {
+                schedule[charId] = events as any;
+            });
+
+            this.cachedSchedule = schedule;
+            return schedule;
+        }
+
+        // FULL MODE: Base timeline with dinner/murder events
         const baseTimeline = [
             { time: '18:00', action: 'Arrives at Thorne Manor', locationId: 'foyer' },
             { time: '19:00', action: 'Listens to the Will Announcement', locationId: 'living_room' },
@@ -56,21 +72,7 @@ export class Scheduler extends Agent {
             schedule[char.id] = JSON.parse(JSON.stringify(baseTimeline));
         });
 
-        // TEST MODE: Use hardcoded schedule if useTestData is true
-        if (useTestData) {
-            console.log("Scheduler -> TestData (Test Mode)");
-            const dynamicSchedule = this.getTestSchedule();
-
-            // Merge dynamic events
-            Object.entries(dynamicSchedule).forEach(([charId, events]) => {
-                if (schedule[charId]) {
-                    // @ts-ignore
-                    schedule[charId].push(...events);
-                    // Sort by time
-                    schedule[charId].sort((a, b) => a.time.localeCompare(b.time));
-                }
-            });
-        } else if (this.genAI && characters.length > 0) {
+        if (this.genAI && characters.length > 0) {
             // FULL MODE: Use Gemini
             try {
                 console.log("Scheduler: Choreographing the night with AI...");
@@ -478,63 +480,53 @@ export class Scheduler extends Agent {
     }
 
     private getTestSchedule(): any {
-        // Timeline (5-minute increments, 10-minute minimum stay per room):
-        // 18:00 - Arrival / Exploration
-        // 19:00 - Living Room (Announcement)
-        // 20:00 - Dining Room (Dinner)
-        // 21:00+ - Exploration / Secrets
-
-        const fixedEvents = [
-            { time: '19:00', action: 'Listening to Archibald\'s announcement', locationId: 'living_room' },
-            { time: '20:00', action: 'eats a tense dinner', locationId: 'dining_room' }
-        ];
+        // Test mode schedule: No dinner/murder events, just exploration for behavior analysis
+        // All characters start in foyer and explore based on personality
+        // IDs must match CastingDirector.getFallbackCast() format: char_N_role
 
         return {
-            'reginald_jeeves': [
+            'char_1_butler': [
                 { time: '18:00', action: 'greeting guests at the door', locationId: 'foyer' },
-                ...fixedEvents,
-                { time: '21:00', action: 'cleaning up dinner service', locationId: 'kitchen' },
-                { time: '21:30', action: 'polishing silver', locationId: 'butlers_pantry' },
-                { time: '22:00', action: 'locking up the wine cellar', locationId: 'kitchen' }
+                { time: '18:15', action: 'tidying up the hall', locationId: 'foyer' },
+                { time: '18:30', action: 'polishing silver', locationId: 'butlers_pantry' },
+                { time: '19:00', action: 'preparing refreshments', locationId: 'kitchen' },
+                { time: '19:30', action: 'checking on the wine cellar', locationId: 'kitchen' }
             ],
-            'aunt_petunia': [
+            'char_2_spinster': [
                 { time: '18:00', action: 'judging the decor', locationId: 'foyer' },
-                { time: '18:30', action: 'complaining about drafts', locationId: 'living_room' },
-                ...fixedEvents,
-                { time: '21:00', action: 'snooping for dust', locationId: 'guest_corridor' },
-                { time: '21:30', action: 'spying from the balcony', locationId: 'upper_landing' }
+                { time: '18:20', action: 'inspecting for dust', locationId: 'living_room' },
+                { time: '18:40', action: 'snooping through hallways', locationId: 'guest_corridor' },
+                { time: '19:00', action: 'spying from the balcony', locationId: 'upper_landing' }
             ],
-            'general_sterling': [
-                { time: '18:00', action: 'boasting about past battles', locationId: 'living_room' },
-                ...fixedEvents,
-                { time: '21:00', action: 'smoking a cigar', locationId: 'game_room' },
-                { time: '21:30', action: 'nervously pacing', locationId: 'masters_study' },
-                { time: '22:00', action: 'playing darts alone', locationId: 'game_room' }
+            'char_3_general': [
+                { time: '18:00', action: 'boasting about past battles', locationId: 'foyer' },
+                { time: '18:25', action: 'examining war memorabilia', locationId: 'living_room' },
+                { time: '18:50', action: 'smoking a cigar', locationId: 'game_room' },
+                { time: '19:15', action: 'pacing nervously', locationId: 'masters_study' }
             ],
-            'vivienne_thorne': [
-                { time: '18:00', action: 'checking her inheritance calculations', locationId: 'masters_study' },
-                { time: '18:40', action: 'pouring a strong drink', locationId: 'living_room' },
-                ...fixedEvents,
-                { time: '21:00', action: 'searching for the will', locationId: 'masters_study' },
-                { time: '22:00', action: 'arguing with Arthur', locationId: 'game_room' }
+            'char_4_daughter': [
+                { time: '18:00', action: 'making a dramatic entrance', locationId: 'foyer' },
+                { time: '18:15', action: 'pouring a strong drink', locationId: 'living_room' },
+                { time: '18:35', action: 'checking inheritance papers', locationId: 'masters_study' },
+                { time: '19:00', action: 'searching for the will', locationId: 'masters_study' }
             ],
-            'arthur_pendelton': [
-                { time: '18:00', action: 'sweating and adjusting his tie', locationId: 'foyer' },
-                ...fixedEvents,
-                { time: '21:00', action: 'reviewing legal documents', locationId: 'guest_corridor' },
-                { time: '21:40', action: 'hiding a contract', locationId: 'butlers_pantry' }
+            'char_5_lawyer': [
+                { time: '18:00', action: 'adjusting his tie nervously', locationId: 'foyer' },
+                { time: '18:20', action: 'reviewing legal documents', locationId: 'guest_corridor' },
+                { time: '18:45', action: 'hiding a contract', locationId: 'butlers_pantry' },
+                { time: '19:10', action: 'pacing in the hallway', locationId: 'foyer' }
             ],
-            'dr_black': [
-                { time: '18:00', action: 'looking for the bar', locationId: 'living_room' },
-                ...fixedEvents,
-                { time: '21:00', action: 'mixing a stiff drink', locationId: 'kitchen' },
-                { time: '21:30', action: 'muttering about lost licenses', locationId: 'game_room' }
+            'char_6_doctor': [
+                { time: '18:00', action: 'looking for the bar', locationId: 'foyer' },
+                { time: '18:10', action: 'mixing a stiff drink', locationId: 'living_room' },
+                { time: '18:35', action: 'muttering about old debts', locationId: 'game_room' },
+                { time: '19:00', action: 'examining medicine bottles', locationId: 'kitchen' }
             ],
-            'miss_scarlet': [
+            'char_7_socialite': [
                 { time: '18:00', action: 'making a grand entrance', locationId: 'foyer' },
-                ...fixedEvents,
-                { time: '21:00', action: 'flirting with the General', locationId: 'game_room' },
-                { time: '22:00', action: 'touching up makeup', locationId: 'upper_landing' }
+                { time: '18:15', action: 'charming the guests', locationId: 'living_room' },
+                { time: '18:40', action: 'flirting with the General', locationId: 'game_room' },
+                { time: '19:05', action: 'touching up makeup', locationId: 'upper_landing' }
             ]
         };
     }
