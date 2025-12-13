@@ -5,6 +5,17 @@ export interface Room {
     exits: Record<string, string>; // e.g., { north: "kitchen" }
 }
 
+/**
+ * A witnessed event stored in a character's memory.
+ */
+export interface CharacterMemory {
+    time: string;           // When they witnessed it
+    roomId: string;         // Where they were
+    witnessedCharId: string; // Who they saw
+    witnessedCharName: string;
+    action: string;         // What they were doing
+}
+
 export interface Character {
     id: string;
     name: string;
@@ -12,6 +23,9 @@ export interface Character {
     bio: string;
     personality: string;
     currentRoomId?: string;
+    memory?: CharacterMemory[];      // Events witnessed by this character
+    cachedResponses?: string[];      // Pre-generated LLM responses for "talk to" 
+    responsesReady?: boolean;        // Whether async LLM responses are prepared
 }
 
 export interface StoryManifest {

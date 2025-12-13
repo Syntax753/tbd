@@ -110,6 +110,17 @@ export class ExecutiveDirector extends Agent {
                     messages.push(`${colorName(move.charName)} enters the room from the ${srcRoomName}.`);
                 }
             }
+
+            // Record witnessed event for all characters in the destination room
+            if (scheduledAction) {
+                this.destiny.recordWitnessedEvent(
+                    move.charId,
+                    move.charName,
+                    scheduledAction,
+                    nextStep,
+                    currentTime
+                );
+            }
         }
 
         return messages;
@@ -139,6 +150,13 @@ export class ExecutiveDirector extends Agent {
     private timeToMinutes(timeStr: string): number {
         const [h, m] = timeStr.split(':').map(Number);
         return h * 60 + m;
+    }
+
+    /**
+     * Get a talk response for a character (delegates to Destiny)
+     */
+    async getTalkResponse(charId: string): Promise<string> {
+        return this.destiny.getTalkResponse(charId);
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {

@@ -90,9 +90,6 @@ export class GameEngine {
         } else if (actualVerb === 'wait') {
             commandOutput = ["You wait for 5 minutes..."];
             this.advanceTime(5);
-        } else if (actualVerb === 'talk') {
-            response = this.handleTalk(noun);
-            commandOutput = [response];
         } else if (cmd === 'help') {
             commandOutput = [
                 "*** HELP ***",
@@ -154,6 +151,24 @@ export class GameEngine {
         } else if (cmd === 'location' || cmd === 'map') {
             // Map is handled by UI, skip refresh
             return "";
+        } else if (actualVerb === 'talk') {
+            // Parse: "talk [to] <name> [about <topic>]"
+            const withoutTo = noun.replace(/^to\s+/i, '').trim();
+            if (!withoutTo) {
+                commandOutput = ["Talk to whom? Try: talk to <name>"];
+            } else {
+                const aboutMatch = withoutTo.match(/^(.+?)\s+about\s+(.+)$/i);
+                if (aboutMatch) {
+                    // Talk about person or action
+                    const charName = aboutMatch[1].trim();
+                    const topic = aboutMatch[2].trim();
+                    commandOutput = await this.handleTalkAbout(charName, topic);
+                } else {
+                    // Simple talk - character introduction
+                    commandOutput = await this.handleTalk(withoutTo);
+                }
+            }
+            this.advanceTime(5);
         } else {
             commandOutput = ["I don't understand that command."];
         }
@@ -267,8 +282,8 @@ export class GameEngine {
         }
     }
 
-    private handleTalk(targetName: string): string {
-        if (!targetName) return "Talk to whom?";
+    private async handleTalk(targetName: string): Promise<string[]> {
+        if (!targetName) return ["Talk to whom?"];
 
         const room = this.state.map[this.state.currentRoomId];
         const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room.id);
@@ -277,17 +292,84 @@ export class GameEngine {
         const target = charsHere.find(c => c.name.toLowerCase().includes(targetName.toLowerCase()));
 
         if (!target) {
-            return "You don't see them here.";
+            return [`You don't see "${targetName}" here.`];
         }
 
-        // Advance time by 5 minutes for talking
-        this.advanceTime(5);
-        if (this.state.isGameOver) {
-            const msg = "MIDNIGHT: Archibald is found dead! Game Over.";
-            return msg;
+        // Get LLM-generated response from Destiny
+        const response = await this.executive.getTalkResponse(target.id);
+
+        return [
+            `${colorName(target.name)} turns to you.`,
+            `"${response}"`
+        ];
+    }
+
+    private async handleTalkAbout(speakerName: string, topic: string): Promise<string[]> {
+        const room = this.state.map[this.state.currentRoomId];
+        const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room.id);
+
+        // Find the speaker
+        const speaker = charsHere.find(c => c.name.toLowerCase().includes(speakerName.toLowerCase()));
+        if (!speaker) {
+            return [`You don't see "${speakerName}" here.`];
         }
 
-        return `${colorName(target.name)} says: "I didn't do it! I swear!" (${target.personality})`;
+        // Check if topic is a person's name
+        const allChars = Object.values(this.state.characters);
+        const targetChar = allChars.find(c => c.name.toLowerCase().includes(topic.toLowerCase()));
+
+        if (targetChar) {
+            // Talking about a person - check speaker's memories
+            const memories = (speaker.memory || []).filter(m =>
+                m.witnessedCharId === targetChar.id
+            );
+
+            if (memories.length === 0) {
+                return [
+                    `${colorName(speaker.name)} shrugs.`,
+                    `"I haven't noticed ${targetChar.name} doing anything unusual."`
+                ];
+            }
+
+            // Report sightings
+            const sightings = memories.slice(-3).map(m =>
+                `"I saw them ${m.action} at ${m.time}."`
+            );
+            return [
+                `${colorName(speaker.name)} thinks for a moment about ${colorName(targetChar.name)}...`,
+                ...sightings
+            ];
+        } else {
+            // Talking about an action/behavior - check if speaker has done it
+            const speakerEvents = this.state.schedule[speaker.id] || [];
+            const matchingEvent = speakerEvents.find(e =>
+                e.action.toLowerCase().includes(topic.toLowerCase())
+            );
+
+            // Character responds based on personality
+            const isDefensive = speaker.personality?.toLowerCase().includes('nervous') ||
+                speaker.personality?.toLowerCase().includes('anxious') ||
+                speaker.personality?.toLowerCase().includes('suspicious');
+
+            if (matchingEvent) {
+                if (isDefensive) {
+                    return [
+                        `${colorName(speaker.name)} looks startled.`,
+                        `"Why are you asking about that? I had my reasons!"`
+                    ];
+                } else {
+                    return [
+                        `${colorName(speaker.name)} looks unconcerned.`,
+                        `"Oh, that? It's perfectly normal. Nothing to worry about."`
+                    ];
+                }
+            } else {
+                return [
+                    `${colorName(speaker.name)} looks confused.`,
+                    `"I'm not sure what you mean by '${topic}'."`
+                ];
+            }
+        }
     }
 
     private advanceTime(minutes: number) {

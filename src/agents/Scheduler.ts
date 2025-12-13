@@ -492,48 +492,68 @@ export class Scheduler extends Agent {
         // IDs must match CastingDirector.getFallbackCast() format: char_N_role
 
         return {
+            // Butler - methodical, always attending to duties
             'char_1_butler': [
                 { time: '18:00', action: 'greeting guests at the door', locationId: 'foyer' },
-                { time: '18:15', action: 'tidying up the hall', locationId: 'foyer' },
                 { time: '18:30', action: 'polishing silver', locationId: 'butlers_pantry' },
-                { time: '19:00', action: 'preparing refreshments', locationId: 'kitchen' },
-                { time: '19:30', action: 'checking on the wine cellar', locationId: 'kitchen' }
+                { time: '19:30', action: 'preparing refreshments', locationId: 'kitchen' },
+                { time: '21:00', action: 'serving evening drinks', locationId: 'living_room' },
+                { time: '22:30', action: 'tidying up for the night', locationId: 'foyer' },
+                { time: '23:45', action: 'checking the doors are locked', locationId: 'foyer' }
             ],
+            // Spinster - nosy, always snooping
             'char_2_spinster': [
                 { time: '18:00', action: 'judging the decor', locationId: 'foyer' },
-                { time: '18:20', action: 'inspecting for dust', locationId: 'living_room' },
                 { time: '18:40', action: 'snooping through hallways', locationId: 'guest_corridor' },
-                { time: '19:00', action: 'spying from the balcony', locationId: 'upper_landing' }
+                { time: '19:30', action: 'eavesdropping on conversations', locationId: 'living_room' },
+                { time: '21:00', action: 'peering through keyholes', locationId: 'upper_landing' },
+                { time: '22:30', action: 'making notes about everyone', locationId: 'guest_corridor' },
+                { time: '23:30', action: 'whispering suspicions', locationId: 'foyer' }
             ],
+            // General - proud, reminiscing about glory days
             'char_3_general': [
                 { time: '18:00', action: 'boasting about past battles', locationId: 'foyer' },
-                { time: '18:25', action: 'examining war memorabilia', locationId: 'living_room' },
                 { time: '18:50', action: 'smoking a cigar', locationId: 'game_room' },
-                { time: '19:15', action: 'pacing nervously', locationId: 'masters_study' }
+                { time: '20:00', action: 'recounting war stories', locationId: 'living_room' },
+                { time: '21:30', action: 'having a brandy nightcap', locationId: 'living_room' },
+                { time: '23:00', action: 'pacing restlessly', locationId: 'masters_study' }
             ],
+            // Daughter - THE MURDERER - greedy, desperate for inheritance
             'char_4_daughter': [
                 { time: '18:00', action: 'making a dramatic entrance', locationId: 'foyer' },
-                { time: '18:15', action: 'pouring a strong drink', locationId: 'living_room' },
                 { time: '18:35', action: 'checking inheritance papers', locationId: 'masters_study' },
-                { time: '19:00', action: 'searching for the will', locationId: 'masters_study' }
+                { time: '19:30', action: 'arguing with someone quietly', locationId: 'living_room' },
+                { time: '21:00', action: 'drinking heavily', locationId: 'game_room' },
+                { time: '22:00', action: 'slipping away unnoticed', locationId: 'guest_corridor' },
+                { time: '23:30', action: 'preparing something sinister', locationId: 'kitchen' },
+                { time: '23:55', action: 'arriving at the study', locationId: 'masters_study' }
             ],
+            // Lawyer - nervous, hiding secrets
             'char_5_lawyer': [
                 { time: '18:00', action: 'adjusting his tie nervously', locationId: 'foyer' },
-                { time: '18:20', action: 'reviewing legal documents', locationId: 'guest_corridor' },
                 { time: '18:45', action: 'hiding a contract', locationId: 'butlers_pantry' },
-                { time: '19:10', action: 'pacing in the hallway', locationId: 'foyer' }
+                { time: '19:30', action: 'consulting legal notes', locationId: 'guest_corridor' },
+                { time: '21:00', action: 'avoiding certain people', locationId: 'kitchen' },
+                { time: '22:30', action: 'making a suspicious phone call', locationId: 'foyer' },
+                { time: '23:30', action: 'looking for an alibi', locationId: 'living_room' }
             ],
+            // Doctor - alcoholic, in debt
             'char_6_doctor': [
                 { time: '18:00', action: 'looking for the bar', locationId: 'foyer' },
-                { time: '18:10', action: 'mixing a stiff drink', locationId: 'living_room' },
-                { time: '18:35', action: 'muttering about old debts', locationId: 'game_room' },
-                { time: '19:00', action: 'examining medicine bottles', locationId: 'kitchen' }
+                { time: '18:20', action: 'mixing a stiff drink', locationId: 'living_room' },
+                { time: '19:30', action: 'slurring words slightly', locationId: 'game_room' },
+                { time: '21:00', action: 'examining his medical bag', locationId: 'kitchen' },
+                { time: '22:30', action: 'stumbling around', locationId: 'upper_landing' },
+                { time: '23:30', action: 'passing out in a chair', locationId: 'living_room' }
             ],
+            // Socialite - charming, manipulative
             'char_7_socialite': [
                 { time: '18:00', action: 'making a grand entrance', locationId: 'foyer' },
-                { time: '18:15', action: 'charming the guests', locationId: 'living_room' },
                 { time: '18:40', action: 'flirting with the General', locationId: 'game_room' },
-                { time: '19:05', action: 'touching up makeup', locationId: 'upper_landing' }
+                { time: '19:30', action: 'spreading gossip', locationId: 'living_room' },
+                { time: '21:00', action: 'making eyes at someone', locationId: 'upper_landing' },
+                { time: '22:30', action: 'reapplying lipstick', locationId: 'guest_corridor' },
+                { time: '23:30', action: 'looking for a late-night scandal', locationId: 'foyer' }
             ]
         };
     }

@@ -1,19 +1,26 @@
 import { Agent } from './Agent';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { AgentCard, Task } from '../engine/A2A';
-import type { Schedule, Character } from '../engine/types';
+import type { Schedule, Character, CharacterMemory } from '../engine/types';
 import type { Scheduler } from './Scheduler';
 
 /**
  * Destiny Agent - Controls character movement based on time and schedule.
- * Works with Scheduler for time-based events and can add spontaneous events.
+ * Also manages character memory and pre-generates LLM responses for conversations.
  */
 export class Destiny extends Agent {
     private schedule: Schedule | null = null;
     private characters: Record<string, Character> = {};
     private scheduler: Scheduler | null = null;
+    private genAI: GoogleGenerativeAI | null = null;
+    private pendingLLMCalls: Map<string, Promise<void>> = new Map();
 
     constructor() {
         super('Destiny', 'Fate');
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (apiKey) {
+            this.genAI = new GoogleGenerativeAI(apiKey);
+        }
     }
 
     get agentCard(): AgentCard {
@@ -176,6 +183,135 @@ export class Destiny extends Agent {
         const h = Math.floor(totalMinutes / 60) % 24;
         const m = totalMinutes % 60;
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Record an event witnessed by all characters in the same room.
+     * Called when a character performs an action.
+     */
+    recordWitnessedEvent(
+        actorId: string,
+        actorName: string,
+        action: string,
+        roomId: string,
+        time: string
+    ): void {
+        // All characters in the same room witness this event (except the actor)
+        Object.values(this.characters).forEach(char => {
+            if (char.id === actorId) return;
+            if (char.currentRoomId !== roomId) return;
+
+            // Initialize memory if needed
+            if (!char.memory) char.memory = [];
+
+            const memory: CharacterMemory = {
+                time,
+                roomId,
+                witnessedCharId: actorId,
+                witnessedCharName: actorName,
+                action
+            };
+
+            char.memory.push(memory);
+            console.log(`Destiny -> Memory: ${char.name} witnessed ${actorName} ${action}`);
+
+            // Trigger async response generation when memory changes
+            this.queueResponseGeneration(char.id);
+        });
+    }
+
+    /**
+     * Queue async LLM response generation for a character.
+     * Generates 1-3 default responses based on personality and memories.
+     */
+    private queueResponseGeneration(charId: string): void {
+        if (this.pendingLLMCalls.has(charId)) return; // Already generating
+
+        const char = this.characters[charId];
+        if (!char || !this.genAI) return;
+
+        const promise = this.generateCharacterResponses(char);
+        this.pendingLLMCalls.set(charId, promise);
+        promise.finally(() => this.pendingLLMCalls.delete(charId));
+    }
+
+    /**
+     * Generate default talk responses for a character using LLM.
+     */
+    private async generateCharacterResponses(char: Character): Promise<void> {
+        if (!this.genAI) return;
+
+        try {
+            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            // Build memory context
+            const memoryLines = (char.memory || []).slice(-5).map(m =>
+                `- Saw ${m.witnessedCharName} ${m.action} at ${m.time}`
+            );
+
+            const prompt = `You are ${char.name}, a ${char.role} in a murder mystery.
+Personality: ${char.personality}
+Bio: ${char.bio}
+
+Recent observations:
+${memoryLines.length > 0 ? memoryLines.join('\n') : '- Nothing unusual yet'}
+
+Generate exactly 3 short responses (1-2 sentences each) that this character might say when the player talks to them. The responses should:
+1. Reflect their personality and role
+2. Reference their observations if relevant
+3. Be mysterious but not reveal too much
+
+Format: Return ONLY a JSON array of 3 strings, like ["response1", "response2", "response3"]`;
+
+            console.log(`Destiny -> LLM: Generating responses for ${char.name}`);
+            const result = await model.generateContent(prompt);
+            const text = result.response.text();
+
+            // Parse JSON array
+            const jsonMatch = text.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const responses = JSON.parse(jsonMatch[0]);
+                char.cachedResponses = responses;
+                char.responsesReady = true;
+                console.log(`Destiny <- LLM: ${char.name} has ${responses.length} responses ready`);
+            }
+        } catch (error) {
+            console.error(`Destiny: Error generating responses for ${char.name}:`, error);
+        }
+    }
+
+    /**
+     * Get a character's talk response (uses cached if available, else generates).
+     */
+    async getTalkResponse(charId: string): Promise<string> {
+        const char = this.characters[charId];
+        if (!char) return "They don't seem interested in talking.";
+
+        // If responses ready, use a cached one
+        if (char.responsesReady && char.cachedResponses && char.cachedResponses.length > 0) {
+            const response = char.cachedResponses.shift()!;
+            if (char.cachedResponses.length === 0) {
+                char.responsesReady = false;
+                this.queueResponseGeneration(charId); // Refill
+            }
+            return response;
+        }
+
+        // Wait for pending generation
+        if (this.pendingLLMCalls.has(charId)) {
+            console.log(`Destiny: Waiting for ${char.name}'s response generation...`);
+            await this.pendingLLMCalls.get(charId);
+            return this.getTalkResponse(charId); // Retry
+        }
+
+        // Generate on demand
+        await this.generateCharacterResponses(char);
+        if (char.cachedResponses && char.cachedResponses.length > 0) {
+            return char.cachedResponses.shift()!;
+        }
+
+        // Fallback
+        return `${char.name} looks at you but says nothing.`;
     }
 
     /**
