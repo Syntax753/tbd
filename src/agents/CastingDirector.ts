@@ -77,13 +77,20 @@ export class CastingDirector extends Agent {
             console.log(`LLM -> CastingDirector response ${text}`);
             const specs = JSON.parse(text);
 
-            this.cast = specs.map((spec: any, index: number) => ({
-                id: `char_${index}_${spec.role.toLowerCase().replace(/ /g, '_')}`,
-                name: spec.name,
-                role: spec.role,
-                bio: `A ${spec.role} with a ${spec.personality} personality.`,
-                personality: spec.personality
-            }));
+            this.cast = specs.map((spec: any, index: number) => {
+                // Sanitize role for ID: lowercase, replace spaces/special chars with underscore
+                const sanitizedRole = spec.role.toLowerCase()
+                    .replace(/[^a-z0-9]/g, '_')  // Replace non-alphanumeric with underscore
+                    .replace(/_+/g, '_')          // Collapse multiple underscores
+                    .replace(/^_|_$/g, '');       // Trim leading/trailing underscores
+                return {
+                    id: `char_${index}_${sanitizedRole}`,
+                    name: spec.name,
+                    role: spec.role,
+                    bio: `A ${spec.role} with a ${spec.personality} personality.`,
+                    personality: spec.personality
+                };
+            });
 
             console.log("CastingDirector: Cast hired.");
 

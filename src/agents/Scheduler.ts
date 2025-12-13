@@ -90,27 +90,29 @@ export class Scheduler extends Agent {
                     ${roomInfos}
                     
                     Task:
-                    Generate a detailed minute-by-minute schedule for each character from 20:30 to 23:55.
+                    Generate a schedule for each character from 20:30 to 23:55.
                     
-                    CRITICAL INSTRUCTIONS:
-                    1. Characters MUST physically move between connected rooms (imply movement by changing locationIds).
+                    CRITICAL TIMING RULES:
+                    1. ALL event times MUST be in 5-minute increments (e.g., 20:30, 20:35, 20:40, NOT 20:32).
+                    2. Characters MUST stay in each room for AT LEAST 10 minutes before moving.
+                    3. Example valid schedule: 20:30 in Kitchen, next event 20:40 or later (NOT 20:35).
+                    
+                    CRITICAL BEHAVIOR RULES:
+                    1. Characters MUST physically move between connected rooms.
                     2. Characters MUST have interactions (e.g., "Arguing with Vivienne", "Plotting with the General").
-                    3. If Character A is "Arguing with Character B" in the Library at 21:00, Character B MUST also be in the Library at 21:00.
-                    4. Use the specific Room IDs provided. Do not invent rooms.
-                    5. Actions should be flavorful and specific to their personality (e.g., "Pacing nervously", "Searching for the will").
+                    3. If Character A is interacting with Character B at a time/place, Character B MUST also be there.
+                    4. Use ONLY the specific Room IDs provided. Do not invent rooms.
+                    5. Actions should be flavorful and specific to their personality.
                     
                     Output Format:
                     Return a JSON object where keys are character IDs and values are arrays of events.
                     Event format: { "time": "HH:MM", "action": "Description", "locationId": "room_id" }
                     
-                    Example:
+                    Example (note 10+ minute gaps between location changes):
                     {
                         "char_butler": [
                             { "time": "20:30", "action": "Cleaning the silverware", "locationId": "kitchen" },
-                            { "time": "21:00", "action": "Serving drinks to the General", "locationId": "billiard_room" }
-                        ],
-                        "char_general": [
-                             { "time": "21:00", "action": "Demanding a drink from the Butler", "locationId": "billiard_room" }
+                            { "time": "20:45", "action": "Serving drinks to the General", "locationId": "living_room" }
                         ]
                     }
                 `;
@@ -136,6 +138,15 @@ export class Scheduler extends Agent {
                 console.warn("Scheduler: Failed to generate dynamic schedule.", err);
             }
         }
+
+        // Validate and normalize times to 5-minute increments for ALL modes
+        Object.keys(schedule).forEach(charId => {
+            schedule[charId] = schedule[charId].map((event: any) => {
+                const minutes = this.timeToMinutes(event.time);
+                const normalized = Math.round(minutes / 5) * 5;
+                return { ...event, time: this.minutesToTime(normalized) };
+            });
+        });
 
         // Add fixed murder events (overwrites/appends critical plot points)
         characters.forEach(char => {
@@ -384,7 +395,7 @@ export class Scheduler extends Agent {
     }
 
     private getTestSchedule(): any {
-        // Timeline:
+        // Timeline (5-minute increments, 10-minute minimum stay per room):
         // 18:00 - Arrival / Exploration
         // 19:00 - Living Room (Announcement)
         // 20:00 - Dining Room (Dinner)
@@ -419,7 +430,7 @@ export class Scheduler extends Agent {
             ],
             'vivienne_thorne': [
                 { time: '18:00', action: 'checking her inheritance calculations', locationId: 'masters_study' },
-                { time: '18:45', action: 'pouring a strong drink', locationId: 'living_room' },
+                { time: '18:40', action: 'pouring a strong drink', locationId: 'living_room' },
                 ...fixedEvents,
                 { time: '21:00', action: 'searching for the will', locationId: 'masters_study' },
                 { time: '22:00', action: 'arguing with Arthur', locationId: 'game_room' }
@@ -428,7 +439,7 @@ export class Scheduler extends Agent {
                 { time: '18:00', action: 'sweating and adjusting his tie', locationId: 'foyer' },
                 ...fixedEvents,
                 { time: '21:00', action: 'reviewing legal documents', locationId: 'guest_corridor' },
-                { time: '21:45', action: 'hiding a contract', locationId: 'butlers_pantry' }
+                { time: '21:40', action: 'hiding a contract', locationId: 'butlers_pantry' }
             ],
             'dr_black': [
                 { time: '18:00', action: 'looking for the bar', locationId: 'living_room' },
