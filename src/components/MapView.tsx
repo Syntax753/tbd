@@ -144,17 +144,27 @@ export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose 
                     <button className="map-close" onClick={onClose}>✕</button>
                 </div>
                 <svg className="map-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
-                    {/* Connection lines */}
-                    {connections.map((conn, i) => (
-                        <line
-                            key={`conn-${i}`}
-                            x1={conn.from.x + ROOM_WIDTH / 2}
-                            y1={conn.from.y + ROOM_HEIGHT / 2}
-                            x2={conn.to.x + ROOM_WIDTH / 2}
-                            y2={conn.to.y + ROOM_HEIGHT / 2}
-                            className="map-connection"
-                        />
-                    ))}
+                    {/* Connection lines (orthogonal paths) */}
+                    {connections.map((conn, i) => {
+                        const x1 = conn.from.x + ROOM_WIDTH / 2;
+                        const y1 = conn.from.y + ROOM_HEIGHT / 2;
+                        const x2 = conn.to.x + ROOM_WIDTH / 2;
+                        const y2 = conn.to.y + ROOM_HEIGHT / 2;
+
+                        // Create orthogonal path (L-shaped)
+                        // Go horizontal first, then vertical
+                        const midY = (y1 + y2) / 2;
+                        const pathD = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+
+                        return (
+                            <path
+                                key={`conn-${i}`}
+                                d={pathD}
+                                className="map-connection"
+                                fill="none"
+                            />
+                        );
+                    })}
 
                     {/* Room boxes */}
                     {roomList.map((room) => {
