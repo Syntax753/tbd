@@ -4,6 +4,8 @@ import type { Room } from '../engine/types';
 interface MapViewProps {
     rooms: Record<string, Room>;
     currentRoomId: string;
+    characterPositions: Record<string, string>; // charId -> roomId
+    characterNames: Record<string, string>; // charId -> name
     onClose: () => void;
 }
 
@@ -12,7 +14,7 @@ const ROOM_HEIGHT = 50;
 const SPACING_X = 180;
 const SPACING_Y = 100;
 
-export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose }) => {
+export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, characterPositions, characterNames, onClose }) => {
     const roomList = Object.values(rooms);
 
     // Handle Escape key to close
@@ -267,6 +269,40 @@ export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose 
                                         ★ YOU
                                     </text>
                                 )}
+                            </g>
+                        );
+                    })}
+
+                    {/* Character markers */}
+                    {Object.entries(
+                        // Group characters by room
+                        Object.entries(characterPositions).reduce((acc, [charId, roomId]) => {
+                            if (!acc[roomId]) acc[roomId] = [];
+                            acc[roomId].push(charId);
+                            return acc;
+                        }, {} as Record<string, string[]>)
+                    ).map(([roomId, charIds]) => {
+                        const pos = positions[roomId];
+                        if (!pos) return null;
+                        const names = charIds.map(id => characterNames[id] || id).join(', ');
+                        const count = charIds.length;
+                        return (
+                            <g key={`chars-${roomId}`}>
+                                <circle
+                                    cx={pos.x + ROOM_WIDTH - 15}
+                                    cy={pos.y + 15}
+                                    r={10}
+                                    className="map-character-marker"
+                                >
+                                    <title>{names}</title>
+                                </circle>
+                                <text
+                                    x={pos.x + ROOM_WIDTH - 15}
+                                    y={pos.y + 19}
+                                    className="map-character-count"
+                                >
+                                    {count}
+                                </text>
                             </g>
                         );
                     })}

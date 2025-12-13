@@ -235,6 +235,27 @@
   font-size: 0.9rem;
 }
 
+.map-character-marker {
+  fill: #ff6600;
+  stroke: #fff;
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.map-character-marker:hover {
+  fill: #ff9900;
+  filter: drop-shadow(0 0 4px #ff6600);
+}
+
+.map-character-count {
+  fill: #fff;
+  font-size: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
 /* Room Name Banner - Gothic Style */
 .room-name-banner {
   text-align: center;

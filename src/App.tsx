@@ -73,6 +73,16 @@ function App() {
         <MapView
           rooms={gameState.map}
           currentRoomId={gameState.currentRoomId}
+          characterPositions={
+            Object.fromEntries(
+              Object.values(gameState.characters || {}).map(c => [c.id, c.currentRoomId || 'foyer'])
+            )
+          }
+          characterNames={
+            Object.fromEntries(
+              Object.values(gameState.characters || {}).map(c => [c.id, c.name])
+            )
+          }
           onClose={() => setShowMap(false)}
         />
       )}
