@@ -113,11 +113,13 @@ export class ExecutiveDirector extends Agent {
 
             // Record witnessed event for all characters in the destination room
             if (scheduledAction) {
+                const destRoomName = grafitti.getRoom(nextStep)?.name || nextStep;
                 this.destiny.recordWitnessedEvent(
                     move.charId,
                     move.charName,
                     scheduledAction,
                     nextStep,
+                    destRoomName,
                     currentTime
                 );
             }
@@ -157,6 +159,14 @@ export class ExecutiveDirector extends Agent {
      */
     async getTalkResponse(charId: string): Promise<string> {
         return this.destiny.getTalkResponse(charId);
+    }
+
+    /**
+     * Get a personality-based response for a specific witnessed event.
+     * Waits for LLM if not cached.
+     */
+    async getEventResponse(charId: string, memory: any): Promise<string> {
+        return this.destiny.getEventResponse(charId, memory);
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {

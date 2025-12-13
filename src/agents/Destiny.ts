@@ -194,6 +194,7 @@ export class Destiny extends Agent {
         actorName: string,
         action: string,
         roomId: string,
+        roomName: string,
         time: string
     ): void {
         // All characters in the same room witness this event (except the actor)
@@ -207,17 +208,55 @@ export class Destiny extends Agent {
             const memory: CharacterMemory = {
                 time,
                 roomId,
+                roomName,
                 witnessedCharId: actorId,
                 witnessedCharName: actorName,
                 action
             };
 
             char.memory.push(memory);
-            console.log(`Destiny -> Memory: ${char.name} witnessed ${actorName} ${action}`);
+            console.log(`Destiny -> Memory: ${char.name} witnessed ${actorName} ${action} in ${roomName}`);
 
-            // Trigger async response generation when memory changes
+            // Generate async personality-based response for this specific memory
+            this.generateEventResponse(char, memory);
+
+            // Also refresh general talk responses
             this.queueResponseGeneration(char.id);
         });
+    }
+
+    /**
+     * Generate a personality-based response for a witnessed event (async).
+     */
+    private async generateEventResponse(char: Character, memory: CharacterMemory): Promise<void> {
+        if (!this.genAI) return;
+
+        try {
+            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const prompt = `You are ${char.name}, a ${char.role} in a 1920s murder mystery.
+Personality: ${char.personality}
+
+You witnessed: ${memory.witnessedCharName} ${memory.action} in the ${memory.roomName} at ${memory.time}.
+
+Generate a SHORT response (1-2 sentences) that reflects your personality when asked about this event. 
+- If you're nervous/insecure, be uncertain and hedging
+- If you're confident, be direct and observant
+- If you're suspicious, add intrigue or accusation
+- If you're protective, maybe cover for them
+
+Return ONLY the dialogue, no quotes, no character name prefix.`;
+
+            console.log(`Destiny -> LLM: Generating event response for ${char.name} about ${memory.witnessedCharName}`);
+            const result = await model.generateContent(prompt);
+            const response = result.response.text().trim();
+
+            // Store the response in the memory object
+            memory.cachedResponse = response;
+            console.log(`Destiny <- LLM: ${char.name}'s response cached: "${response.substring(0, 50)}..."`);
+        } catch (error) {
+            console.error(`Destiny: Error generating event response for ${char.name}:`, error);
+        }
     }
 
     /**
@@ -312,6 +351,55 @@ Format: Return ONLY a JSON array of 3 strings, like ["response1", "response2", "
 
         // Fallback
         return `${char.name} looks at you but says nothing.`;
+    }
+
+    /**
+     * Get a personality-based response for a specific witnessed event.
+     * Returns cached if available, otherwise generates synchronously.
+     */
+    async getEventResponse(charId: string, memory: CharacterMemory): Promise<string> {
+        const char = this.characters[charId];
+        if (!char) return "They don't remember.";
+
+        // If already cached, return it
+        if (memory.cachedResponse) {
+            return memory.cachedResponse;
+        }
+
+        // Generate synchronously if not cached
+        if (!this.genAI) {
+            return `I saw ${memory.witnessedCharName} ${memory.action} in the ${memory.roomName} around ${memory.time}.`;
+        }
+
+        try {
+            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const prompt = `You are ${char.name}, a ${char.role} in a 1920s murder mystery.
+Personality: ${char.personality}
+
+You witnessed: ${memory.witnessedCharName} ${memory.action} in the ${memory.roomName} at ${memory.time}.
+
+Generate a SHORT response (1-2 sentences) that reflects your personality when asked about this event. 
+- If you're nervous/insecure, be uncertain and hedging
+- If you're confident, be direct and observant
+- If you're suspicious, add intrigue or accusation
+- If you're protective, maybe cover for them
+
+Return ONLY the dialogue, no quotes, no character name prefix.`;
+
+            console.log(`Destiny -> LLM: Generating event response for ${char.name} about ${memory.witnessedCharName} (on-demand)`);
+            const result = await model.generateContent(prompt);
+            const response = result.response.text().trim();
+
+            // Cache it for future use
+            memory.cachedResponse = response;
+            console.log(`Destiny <- LLM: ${char.name}'s response: "${response.substring(0, 50)}..."`);
+
+            return response;
+        } catch (error) {
+            console.error(`Destiny: Error generating event response:`, error);
+            return `I saw ${memory.witnessedCharName} ${memory.action} in the ${memory.roomName} around ${memory.time}.`;
+        }
     }
 
     /**

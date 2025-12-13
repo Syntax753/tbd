@@ -10,10 +10,12 @@ export interface Room {
  */
 export interface CharacterMemory {
     time: string;           // When they witnessed it
-    roomId: string;         // Where they were
+    roomId: string;         // Where they were (ID)
+    roomName: string;       // Where they were (display name)
     witnessedCharId: string; // Who they saw
     witnessedCharName: string;
     action: string;         // What they were doing
+    cachedResponse?: string; // Pre-generated personality-based response
 }
 
 export interface Character {

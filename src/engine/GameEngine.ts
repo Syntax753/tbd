@@ -170,6 +170,9 @@ export class GameEngine {
                 }
             }
             this.advanceTime(5);
+            // For talk, append to history instead of refreshing
+            this.appendToHistory(commandOutput);
+            return "";
         } else {
             commandOutput = ["I don't understand that command."];
         }
@@ -240,6 +243,16 @@ export class GameEngine {
 
         // 5. Command output
         commandOutput.forEach(line => this.state.history.push(line));
+    }
+
+    /**
+     * Append lines to history without clearing (for conversations).
+     */
+    private appendToHistory(lines: string[]) {
+        if (lines.length > 0) {
+            this.state.history.push(""); // Blank line separator
+            lines.forEach(line => this.state.history.push(line));
+        }
     }
 
     private handleLook(): string {
@@ -332,10 +345,17 @@ export class GameEngine {
                 ];
             }
 
-            // Report sightings
-            const sightings = memories.slice(-3).map(m =>
-                `"I saw them ${m.action} at ${m.time}."`
-            );
+            // Report sightings - wait for response if not cached
+            const sightings: string[] = [];
+            for (const m of memories.slice(-3)) {
+                if (m.cachedResponse) {
+                    sightings.push(`"${m.cachedResponse}"`);
+                } else {
+                    // Wait for LLM generation if not ready
+                    const response = await this.executive.getEventResponse(speaker.id, m);
+                    sightings.push(`"${response}"`);
+                }
+            }
             return [
                 `${colorName(speaker.name)} thinks for a moment about ${colorName(targetChar.name)}...`,
                 ...sightings
