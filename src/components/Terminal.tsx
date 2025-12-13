@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+interface Exit {
+    shortDir: string;
+    targetName: string;
+}
+
 interface TerminalProps {
     history: string[];
     time?: string;
+    roomName?: string;
+    exits?: Exit[];
     onCommand: (cmd: string) => void;
 }
 
-export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) => {
+export const Terminal: React.FC<TerminalProps> = ({ history, time, roomName, exits, onCommand }) => {
     const [input, setInput] = useState('');
     const [cmdHistory, setCmdHistory] = useState<string[]>([]);
     const [historyPtr, setHistoryPtr] = useState<number>(0);
@@ -94,6 +101,13 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
 
     return (
         <div className="game-container">
+            {/* Room Name Banner - Above CRT */}
+            {roomName && (
+                <div className="room-name-banner">
+                    {roomName}
+                </div>
+            )}
+
             {/* CRT Monitor Area for Output Only */}
             <div className="crt-monitor">
                 <div className="terminal-output">
@@ -104,6 +118,17 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
                     ))}
                     <div ref={endRef} />
                 </div>
+
+                {/* Exits Footer */}
+                {exits && exits.length > 0 && (
+                    <div className="exits-footer">
+                        {exits.map((e, i) => (
+                            <span key={i} className="exit-item">
+                                [{e.shortDir}] {e.targetName}{i < exits.length - 1 ? '  ' : ''}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Control Bar: Input + Clock */}
