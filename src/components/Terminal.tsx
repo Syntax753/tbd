@@ -8,6 +8,8 @@ interface TerminalProps {
 
 export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) => {
     const [input, setInput] = useState('');
+    const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+    const [historyPtr, setHistoryPtr] = useState<number>(0);
     const endRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -15,7 +17,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
         endRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [history]);
 
-    // Auto-focus input on click anywhere, unless selecting text
+    // Auto-focus logic...
     useEffect(() => {
         const handleGlobalClick = () => {
             const selection = window.getSelection();
@@ -30,8 +32,36 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
+
         onCommand(input);
+
+        // Update history
+        const newHistory = [...cmdHistory, input];
+        setCmdHistory(newHistory);
+        setHistoryPtr(newHistory.length);
+
         setInput('');
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyPtr > 0) {
+                const newPtr = historyPtr - 1;
+                setHistoryPtr(newPtr);
+                setInput(cmdHistory[newPtr]);
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyPtr < cmdHistory.length - 1) {
+                const newPtr = historyPtr + 1;
+                setHistoryPtr(newPtr);
+                setInput(cmdHistory[newPtr]);
+            } else {
+                setHistoryPtr(cmdHistory.length);
+                setInput('');
+            }
+        }
     };
 
     return (
@@ -58,6 +88,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         className="terminal-input"
                     />
                 </form>
