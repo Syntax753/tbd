@@ -7,6 +7,7 @@ interface MapViewProps {
     characterPositions: Record<string, string>; // charId -> roomId
     characterNames: Record<string, string>; // charId -> name
     onClose: () => void;
+    onMove: (direction: string) => void; // Called when arrow key moves player
 }
 
 const ROOM_WIDTH = 120;
@@ -14,19 +15,38 @@ const ROOM_HEIGHT = 50;
 const SPACING_X = 180;
 const SPACING_Y = 100;
 
-export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, characterPositions, characterNames, onClose }) => {
+export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, characterPositions, characterNames, onClose, onMove }) => {
     const roomList = Object.values(rooms);
 
-    // Handle Escape key to close
+    // Handle Escape key to close and arrow keys for movement
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose();
+                return;
+            }
+
+            // Arrow key movement
+            const arrowToDir: Record<string, string> = {
+                'ArrowUp': 'north',
+                'ArrowDown': 'south',
+                'ArrowLeft': 'west',
+                'ArrowRight': 'east'
+            };
+
+            const dir = arrowToDir[e.key];
+            if (dir) {
+                e.preventDefault();
+                const currentRoom = rooms[currentRoomId];
+                if (currentRoom?.exits[dir]) {
+                    onMove(dir);
+                    // Map stays open - only Escape closes it
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
+    }, [onClose, onMove, rooms, currentRoomId]);
 
     // Calculate room positions using strict grid-based layout
     const positions = useMemo(() => {

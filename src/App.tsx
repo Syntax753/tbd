@@ -36,7 +36,8 @@ function App() {
 
   const handleCommand = async (cmd: string) => {
     // Check for map command to toggle graphical map
-    if (cmd.toLowerCase() === 'map' || cmd.toLowerCase() === 'location') {
+    const lowerCmd = cmd.toLowerCase();
+    if (lowerCmd === 'map' || lowerCmd === 'location' || lowerCmd === 'm') {
       setShowMap(true);
       return;
     }
@@ -84,6 +85,7 @@ function App() {
             )
           }
           onClose={() => setShowMap(false)}
+          onMove={(dir) => handleCommand(dir)}
         />
       )}
     </>
