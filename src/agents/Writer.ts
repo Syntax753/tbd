@@ -103,16 +103,6 @@ export class Writer extends Agent {
                 "CLUE: The study door was locked from the inside, but the window was open.",
                 "CAST: 8 Characters total (Host + 7 Suspects)."
             ],
-            characterSpecs: [
-                { name: "Archibald Thorne", role: "Host/Victim", personality: "Paranoid, wealthy, cruel" },
-                { name: "Reginald Jeeves", role: "Butler", personality: "Loyal facade, secretly vengeful" },
-                { name: "Aunt Petunia", role: "Spinster", personality: "Frail, observant, sharp-tongued" },
-                { name: "General Sterling", role: "General", personality: "Blustery, nervous, fraudulent" },
-                { name: "Vivienne Thorne", role: "Daughter", personality: "Ambitious, cold, calculating" },
-                { name: "Arthur Pendelton", role: "Lawyer", personality: "Anxious, greedy, sweaty" },
-                { name: "Dr. Black", role: "Doctor", personality: "Alcoholic, cynical, shaky hands" },
-                { name: "Miss Scarlet", role: "Socialite", personality: "Flirtatious, manipulative, debt-ridden" }
-            ]
         };
     }
 }

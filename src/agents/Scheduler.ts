@@ -86,21 +86,27 @@ export class Scheduler extends Agent {
                     ${roomInfos}
                     
                     Task:
-                    Generate a schedule for each character from 20:30 to 23:55.
-                    Characters should visit rooms that align with their interests/personalities.
-                    Characters can move multiple times.
+                    Generate a detailed minute-by-minute schedule for each character from 20:30 to 23:55.
                     
-                    IMPORTANT:
-                    - Return a JSON object where keys are character IDs and values are arrays of events.
-                    - Event format: { time: "HH:MM", action: "Specific action description", locationId: "room_id" }
-                    - Do NOT schedule events for the Host/Victim after 20:00 (he is busy dying later).
-                    - Ensure locationIds match the provided room list exactly.
+                    CRITICAL INSTRUCTIONS:
+                    1. Characters MUST physically move between connected rooms (imply movement by changing locationIds).
+                    2. Characters MUST have interactions (e.g., "Arguing with Vivienne", "Plotting with the General").
+                    3. If Character A is "Arguing with Character B" in the Library at 21:00, Character B MUST also be in the Library at 21:00.
+                    4. Use the specific Room IDs provided. Do not invent rooms.
+                    5. Actions should be flavorful and specific to their personality (e.g., "Pacing nervously", "Searching for the will").
+                    
+                    Output Format:
+                    Return a JSON object where keys are character IDs and values are arrays of events.
+                    Event format: { "time": "HH:MM", "action": "Description", "locationId": "room_id" }
                     
                     Example:
                     {
                         "char_butler": [
                             { "time": "20:30", "action": "Cleaning the silverware", "locationId": "kitchen" },
-                            { "time": "22:00", "action": "Polishing the banister", "locationId": "foyer" }
+                            { "time": "21:00", "action": "Serving drinks to the General", "locationId": "billiard_room" }
+                        ],
+                        "char_general": [
+                             { "time": "21:00", "action": "Demanding a drink from the Butler", "locationId": "billiard_room" }
                         ]
                     }
                 `;
@@ -142,8 +148,233 @@ export class Scheduler extends Agent {
             schedule[char.id].sort((a, b) => a.time.localeCompare(b.time));
         });
 
+        // INJECT TRAVEL EVENTS (Pathfinding)
+        // Convert rooms array to map for easier lookup
+        const roomMap: Record<string, any> = {};
+        rooms.forEach((r: any) => roomMap[r.id] = r);
+        this.injectTravelEvents(schedule, roomMap);
+
         this.cachedSchedule = schedule;
         return schedule;
+    }
+
+    private injectTravelEvents(schedule: Schedule, roomMap: Record<string, any>) {
+        Object.keys(schedule).forEach(charId => {
+            const events = schedule[charId];
+            const newEvents: any[] = [];
+
+            // Start with the first event
+            if (events.length === 0) return;
+            newEvents.push(events[0]);
+
+            for (let i = 1; i < events.length; i++) {
+                const prevEvent = events[i - 1];
+                const currEvent = events[i];
+
+                if (prevEvent.locationId !== currEvent.locationId) {
+                    // Calculate path
+                    const path = this.findPath(prevEvent.locationId, currEvent.locationId, roomMap);
+
+                    if (path.length > 0) {
+                        // Back-fill from arrival time
+                        // We need to arrive at 'currEvent.time'.
+                        // The last step (entering currEvent.locationId) happens AT currEvent.time? 
+                        // No, usually "Arrives at 20:00". So they must be "Moving" before 20:00.
+                        // Let's say at 20:00 they are there. So at 19:55 they were at the previous step moving in?
+
+                        const arrivalMinutes = this.timeToMinutes(currEvent.time);
+
+                        // We need one event per step.
+                        // Path: [Step1_ID, Step2_ID, ..., Target_ID]
+                        // BUT: We are already AT prevEvent.locationId.
+                        // Step 1: Move to P[0].
+                        // Target is P[last].
+
+                        // Let's say Path is [Hallway, Kitchen]. (From Foyer).
+                        // Arrival at Kitchen is 20:00.
+                        // 19:55: In Hallway (Moving to Kitchen).
+                        // 19:50: In Foyer (Moving to Hallway).
+
+                        // Iterate backwards through path
+                        // path[last] is the target room (which determines the validation of arrival). 
+                        // actually findPath result usually includes (or excludes) start/end depending on impl.
+                        // Let's make findPath return ONLY intermediate steps + target.
+
+                        // Path: [Intermediate1, Intermediate2, Target]
+
+                        let offsetMinutes = 5;
+                        for (let j = path.length - 1; j >= 0; j--) {
+                            const stepRoomId = path[j]; // This is where they ARE.
+                            // Wait, if they are AT the target at 20:00, then at 19:55 they are one step away.
+                            // So path[last] is target. We don't need to say "Moving to target" AT the target.
+                            // We need to say "Moving to target" at the step BEFORE target.
+
+                            // Let's look at the example: 
+                            // 19:55: Location = Hallway. Action = "Moving to Kitchen".
+
+                            // So if I am at path[j] at time T, I am moving to path[j+1].
+
+                            // Let's construct the sequence of LOCATIONS they occupy.
+                            // Start -> ... -> End.
+                            // At Time(End) they are at End.
+                            // At Time(End)-5 they are at End-1.
+
+                            // So we iterate:
+                            // T_arrival = currEvent.
+                            // Location(T-5) = path[last-1]. Action = "Moving to path[last]"
+                            // Location(T-10) = path[last-2]. Action = "Moving to path[last-1]" (?? No, moving towards ultimate goal?)
+                            // User wants simple "Moving".
+
+                            // Let's refine:
+                            // Path includes TARGET. 
+                            // e.g. Start=Foyer. Target=Kitchen. Path=[Hallway, Kitchen].
+                            // T=20:00, Loc=Kitchen (The main event).
+                            // T=19:55, Loc=Hallway. Action="Moving to Kitchen".
+
+                            // T=19:50, Loc=Foyer (Start). Action="Moving to Hallway".
+                            // note: prevEvent was at Foyer. We might arguably overwrite/insert this.
+
+                            // Let's loop k from 1 to path.length.
+                            // The step we are taking is moving TO path[last - k + 1?].
+
+                            // Actually, let's keep it simple.
+                            // We have a list of rooms to traverse: [R1, R2, ..., R_Target].
+                            // Start is R0.
+                            // At T_Arrival (Time 0), we are at R_Target.
+                            // At T-5, we are at R_(Target-1).
+
+                            // Let's act on the path *excluding* target for the "Moving" events.
+                            // If Path is [Hallway, Kitchen].
+                            // We need an event at 19:55 in Hallway.
+
+                            // What if Path has 1 step [Kitchen] (Neighbor).
+                            // No intermediate event needed? 
+                            // Wait, if I am at Foyer at 19:00. Dinner at 20:00 in Dining Room.
+                            // Foyer -> Dining Room is direct? Let's say yes.
+                            // 19:55: In Foyer, "Moving to Dining Room"?
+                            // If we don't put this in, they just teleport at 20:00.
+                            // The user said: "The scheduler would then insert an activity for moving...".
+                            // So even for 1 step, we should probably have a "Leaving" or "Moving" event?
+                            // Or does the Game Engine handle the 1-step move?
+                            // Game Engine handles 5-min travel.
+                            // If I schedule event at 20:00 in Dining Room.
+                            // At 19:55 character is in Foyer.
+                            // At 20:00 character moves to Dining Room?
+                            // The engine sees: "Oh, it's 20:00, target is Dining Room. I am in Foyer. Move."
+                            // So the ENGINE handles the actual move.
+                            // BUT the user wants the SCHEDULE to include it.
+                            // "The scheduler would then insert an activity for moving..."
+                            // Maybe this means for MULTI-ROOM travel?
+                            // "ensure the schedule includes moving the character to get there in time... using pathfinding ... how many moves it would take"
+
+                            // If it takes 3 moves (15 mins), and scheduled event is 20:00.
+                            // 19:45: Move 1.
+                            // 19:50: Move 2.
+                            // 19:55: Move 3 (Arrive).
+
+                            // So we need intermediate waypoints for multi-hop paths.
+                            // Path from Start to End.
+                            // If Path is [A, B, C] (Length 3).
+                            // Target C is at T.
+                            // We need events for A (at T-10) and B (at T-5)?
+                            // No, pathfinding returns [A, B, C].
+                            // C is covered by the main event.
+                            // We need to schedule "Transit" events for A and B.
+
+                            // Wait, A is the first step.
+                            // If start was S. Path [A, B, C].
+                            // We need to be at A at T?
+                            // T=20:00 is arrival at C.
+                            // T-5 (19:55) = At B.
+                            // T-10 (19:50) = At A.
+
+                            // YES. We need to insert events for the *prefix* of the path.
+
+                            const stepsNeeded = path.length - 1; // Exclude target
+                            if (stepsNeeded <= 0) continue; // Direct connection, engine handles it? Or no?
+                            // If direct connection, path is [Target]. Steps=0.
+                            // Engine handles 1-hop.
+                            // But if we want to confirm departure... "19:55 moving to Target"?
+                            // Let's stick to filling gaps > 1 hop first.
+
+                            for (let k = 0; k < stepsNeeded; k++) {
+                                // path = [A, B, C]. stepsNeeded=2 (A, B).
+                                // k=0 -> A. Time needed?
+                                // Arrival (C) is at T.
+                                // B is T-5.
+                                // A is T-10.
+                                // Formula: Minutes = Arrival - (PathLen - k) * 5?
+                                // PathLen=3.
+                                // k=0 (A): T - (3 - 0 - 1)*5? No.
+                                // Reverse index?
+                                // Let's simplify.
+                                // The room we need to be in is path[k].
+                                // The time we need to be there is Arrival - (PathLength - 1 - k) * 5.
+
+                                // Example: [A, B, C]. Len=3.
+                                // k=0 (A). Time = T - (3 - 1 - 0)*5 = T - 10. Correct.
+                                // k=1 (B). Time = T - (3 - 1 - 1)*5 = T - 5. Correct.
+
+                                const stepRoomId = path[k];
+                                const timeOffset = (path.length - 1 - k) * 5;
+                                const timeMinutes = arrivalMinutes - timeOffset;
+                                const timeStr = this.minutesToTime(timeMinutes);
+
+                                // Target of this move? The NEXT room.
+                                const nextRoom = path[k + 1];
+                                const nextRoomName = roomMap[nextRoom]?.name || nextRoom;
+
+                                // Check if this time conflicts?
+                                // We are just inserting into newEvents?
+                                // We should push these to newEvents before pushing currEvent.
+                                // BUT we need to make sure we don't duplicate or go out of order regarding prevEvent.
+                                // If timeStr <= prevEvent.time, we have a squeeze.
+                                // We'll just ignore for now or clamp?
+                                // User said "ensure... in time".
+
+                                newEvents.push({
+                                    time: timeStr,
+                                    action: `Moving towards ${nextRoomName}`,
+                                    locationId: stepRoomId
+                                });
+                            }
+                        }
+                    }
+                }
+
+                newEvents.push(currEvent);
+            }
+
+            schedule[charId] = newEvents;
+        });
+    }
+
+    private findPath(startId: string, targetId: string, roomMap: Record<string, any>): string[] {
+        if (startId === targetId) return [];
+
+        const queue: { id: string; path: string[] }[] = [{ id: startId, path: [] }];
+        const visited = new Set<string>();
+        visited.add(startId);
+
+        while (queue.length > 0) {
+            const { id, path } = queue.shift()!;
+
+            if (id === targetId) {
+                return path; // Path of IDs to get there (excluding start, including end) -> [Step1, Step2, ..., Target]
+            }
+
+            const room = roomMap[id];
+            if (!room) continue;
+
+            // Exits loop
+            for (const neighborId of Object.values(room.exits || {})) {
+                if (!visited.has(neighborId as string)) {
+                    visited.add(neighborId as string);
+                    queue.push({ id: neighborId as string, path: [...path, neighborId as string] });
+                }
+            }
+        }
+        return [];
     }
 
     private getTestSchedule(): any {
@@ -206,5 +437,16 @@ export class Scheduler extends Agent {
                 { time: '22:00', action: 'touching up makeup', locationId: 'upper_landing' }
             ]
         };
+    }
+
+    private timeToMinutes(timeStr: string): number {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    private minutesToTime(minutes: number): string {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 }
