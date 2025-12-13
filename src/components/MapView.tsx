@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import type { Room } from '../engine/types';
 
 interface MapViewProps {
@@ -7,51 +7,131 @@ interface MapViewProps {
     onClose: () => void;
 }
 
-// Define room positions for the test mansion layout
-const ROOM_POSITIONS: Record<string, { x: number; y: number }> = {
-    'foyer': { x: 300, y: 200 },
-    'upper_landing': { x: 300, y: 50 },
-    'guest_corridor': { x: 500, y: 50 },
-    'dining_room': { x: 500, y: 200 },
-    'kitchen': { x: 500, y: 350 },
-    'butlers_pantry': { x: 700, y: 350 },
-    'living_room': { x: 100, y: 200 },
-    'game_room': { x: 100, y: 350 },
-    'masters_study': { x: 300, y: 350 }
-};
-
 const ROOM_WIDTH = 120;
 const ROOM_HEIGHT = 50;
+const SPACING_X = 180;
+const SPACING_Y = 100;
 
 export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose }) => {
     const roomList = Object.values(rooms);
 
-    // Generate positions for unknown rooms
-    const getPosition = (roomId: string, index: number) => {
-        if (ROOM_POSITIONS[roomId]) {
-            return ROOM_POSITIONS[roomId];
+    // Handle Escape key to close
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    // Calculate room positions dynamically using BFS from foyer
+    const positions = useMemo(() => {
+        const pos: Record<string, { x: number; y: number }> = {};
+        const visited = new Set<string>();
+
+        // Start from foyer (center of map)
+        const startId = 'foyer';
+        const startX = 400;
+        const startY = 250;
+
+        if (!rooms[startId]) {
+            // Fallback if no foyer
+            roomList.forEach((room, i) => {
+                const col = i % 4;
+                const row = Math.floor(i / 4);
+                pos[room.id] = { x: 100 + col * SPACING_X, y: 80 + row * SPACING_Y };
+            });
+            return pos;
         }
-        // Dynamic positioning for LLM-generated rooms
-        const col = index % 4;
-        const row = Math.floor(index / 4) + 3; // Start below static rooms
-        return { x: 100 + col * 200, y: 50 + row * 150 };
-    };
+
+        // BFS to position rooms based on connections
+        const queue: { id: string; x: number; y: number; depth: number }[] = [
+            { id: startId, x: startX, y: startY, depth: 0 }
+        ];
+        visited.add(startId);
+        pos[startId] = { x: startX, y: startY };
+
+        // Direction offsets based on cardinal directions
+        const dirOffsets: Record<string, { dx: number; dy: number }> = {
+            'north': { dx: 0, dy: -SPACING_Y },
+            'south': { dx: 0, dy: SPACING_Y },
+            'east': { dx: SPACING_X, dy: 0 },
+            'west': { dx: -SPACING_X, dy: 0 },
+            'up': { dx: 0, dy: -SPACING_Y },
+            'down': { dx: 0, dy: SPACING_Y }
+        };
+
+        while (queue.length > 0) {
+            const { id, x, y } = queue.shift()!;
+            const room = rooms[id];
+            if (!room) continue;
+
+            Object.entries(room.exits).forEach(([dir, targetId]) => {
+                if (visited.has(targetId)) return;
+                visited.add(targetId);
+
+                const offset = dirOffsets[dir.toLowerCase()] || { dx: SPACING_X, dy: 0 };
+                let newX = x + offset.dx;
+                let newY = y + offset.dy;
+
+                // Avoid overlaps by adjusting position
+                let attempts = 0;
+                while (attempts < 8 && Object.values(pos).some(p =>
+                    Math.abs(p.x - newX) < ROOM_WIDTH && Math.abs(p.y - newY) < ROOM_HEIGHT
+                )) {
+                    // Spiral out
+                    newX += (attempts % 2 === 0 ? 1 : -1) * SPACING_X * 0.3;
+                    newY += (attempts % 2 === 1 ? 1 : -1) * SPACING_Y * 0.3;
+                    attempts++;
+                }
+
+                pos[targetId] = { x: newX, y: newY };
+                queue.push({ id: targetId, x: newX, y: newY, depth: 0 });
+            });
+        }
+
+        // Position any unvisited rooms
+        let fallbackIndex = 0;
+        roomList.forEach(room => {
+            if (!pos[room.id]) {
+                pos[room.id] = {
+                    x: 100 + (fallbackIndex % 4) * SPACING_X,
+                    y: 450 + Math.floor(fallbackIndex / 4) * SPACING_Y
+                };
+                fallbackIndex++;
+            }
+        });
+
+        return pos;
+    }, [rooms, roomList]);
+
+    // Calculate viewBox to fit all rooms
+    const viewBox = useMemo(() => {
+        const allX = Object.values(positions).map(p => p.x);
+        const allY = Object.values(positions).map(p => p.y);
+        const minX = Math.min(...allX) - 50;
+        const minY = Math.min(...allY) - 50;
+        const maxX = Math.max(...allX) + ROOM_WIDTH + 50;
+        const maxY = Math.max(...allY) + ROOM_HEIGHT + 50;
+        return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+    }, [positions]);
 
     // Generate connections (lines between rooms)
-    const connections: { from: { x: number; y: number }; to: { x: number; y: number }; dir: string }[] = [];
-    roomList.forEach((room, index) => {
-        const fromPos = getPosition(room.id, index);
-        Object.entries(room.exits).forEach(([dir, targetId]) => {
-            const targetIndex = roomList.findIndex(r => r.id === targetId);
-            if (targetIndex !== -1) {
-                const toPos = getPosition(targetId, targetIndex);
-                // Only add connection once (avoid duplicates)
-                const exists = connections.some(c =>
-                    (c.from.x === toPos.x && c.from.y === toPos.y && c.to.x === fromPos.x && c.to.y === fromPos.y)
-                );
-                if (!exists) {
-                    connections.push({ from: fromPos, to: toPos, dir });
-                }
+    const connections: { from: { x: number; y: number }; to: { x: number; y: number } }[] = [];
+    roomList.forEach((room) => {
+        const fromPos = positions[room.id];
+        if (!fromPos) return;
+        Object.entries(room.exits).forEach(([, targetId]) => {
+            const toPos = positions[targetId];
+            if (!toPos) return;
+            // Only add connection once (avoid duplicates)
+            const exists = connections.some(c =>
+                (c.from.x === toPos.x && c.from.y === toPos.y && c.to.x === fromPos.x && c.to.y === fromPos.y)
+            );
+            if (!exists) {
+                connections.push({ from: fromPos, to: toPos });
             }
         });
     });
@@ -63,7 +143,7 @@ export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose 
                     <h2>*** MAP ***</h2>
                     <button className="map-close" onClick={onClose}>✕</button>
                 </div>
-                <svg className="map-svg" viewBox="0 0 900 550">
+                <svg className="map-svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
                     {/* Connection lines */}
                     {connections.map((conn, i) => (
                         <line
@@ -77,8 +157,9 @@ export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose 
                     ))}
 
                     {/* Room boxes */}
-                    {roomList.map((room, index) => {
-                        const pos = getPosition(room.id, index);
+                    {roomList.map((room) => {
+                        const pos = positions[room.id];
+                        if (!pos) return null;
                         const isHere = room.id === currentRoomId;
                         return (
                             <g key={room.id}>
@@ -109,7 +190,7 @@ export const MapView: React.FC<MapViewProps> = ({ rooms, currentRoomId, onClose 
                         );
                     })}
                 </svg>
-                <p className="map-hint">Click anywhere to close</p>
+                <p className="map-hint">Press ESC or click anywhere to close</p>
             </div>
         </div>
     );

@@ -90,18 +90,55 @@ export class ExecutiveDirector extends Agent {
             const char = characters[move.charId];
             if (char) char.currentRoomId = nextStep;
 
+            // Get the character's scheduled action to include in message
+            const scheduledAction = this.getScheduledAction(move.charId, currentTime);
+
             // Generate messages if player is in affected rooms
             if (playerRoomId === oldRoom) {
                 const destRoomName = grafitti.getRoom(nextStep)?.name || nextStep;
-                messages.push(`${colorName(move.charName)} leaves to the ${destRoomName}.`);
+                if (scheduledAction) {
+                    messages.push(`${colorName(move.charName)} heads to the ${destRoomName} to ${scheduledAction}.`);
+                } else {
+                    messages.push(`${colorName(move.charName)} leaves to the ${destRoomName}.`);
+                }
             }
             if (playerRoomId === nextStep) {
                 const srcRoomName = grafitti.getRoom(oldRoom)?.name || oldRoom;
-                messages.push(`${colorName(move.charName)} enters the room from the ${srcRoomName}.`);
+                if (scheduledAction) {
+                    messages.push(`${colorName(move.charName)} enters from the ${srcRoomName} and ${scheduledAction}.`);
+                } else {
+                    messages.push(`${colorName(move.charName)} enters the room from the ${srcRoomName}.`);
+                }
             }
         }
 
         return messages;
+    }
+
+    /**
+     * Get a character's scheduled action for the current time.
+     * Uses Scheduler's cached schedule.
+     */
+    private getScheduledAction(charId: string, currentTime: string): string | null {
+        const schedule = this.scheduler.getSchedule();
+        if (!schedule || !schedule[charId]) return null;
+
+        const events = schedule[charId];
+        const currentMinutes = this.timeToMinutes(currentTime);
+
+        // Find the current or upcoming event
+        for (let i = events.length - 1; i >= 0; i--) {
+            const eventMinutes = this.timeToMinutes(events[i].time);
+            if (eventMinutes <= currentMinutes) {
+                return events[i].action.toLowerCase();
+            }
+        }
+        return events[0]?.action.toLowerCase() || null;
+    }
+
+    private timeToMinutes(timeStr: string): number {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {

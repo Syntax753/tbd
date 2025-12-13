@@ -37,6 +37,13 @@ export class Scheduler extends Agent {
         return null;
     }
 
+    /**
+     * Get the cached schedule directly (for ExecutiveDirector)
+     */
+    getSchedule(): Schedule | null {
+        return this.cachedSchedule;
+    }
+
     async work(story: StoryManifest, characters: any[], rooms: any[], useTestData: boolean = false): Promise<Schedule> {
         // Simulating "scheduling" based on the story
         await new Promise(resolve => setTimeout(resolve, 800));
