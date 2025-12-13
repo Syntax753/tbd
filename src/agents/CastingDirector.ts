@@ -43,7 +43,7 @@ export class CastingDirector extends Agent {
 
             const prompt = `
                 You are a casting director for a murder mystery game.
-                Based on the following story, create 7-8 unique characters (including the victim if applicable, though usually they are pre-defined in the story context).
+                Based on the following story, create 4-5 unique characters (including the victim if applicable, though usually they are pre-defined in the story context).
                 
                 Story Title: ${story.title}
                 Background: ${story.background}
