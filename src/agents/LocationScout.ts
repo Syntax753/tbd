@@ -6,17 +6,17 @@ import type { AgentCard } from '../engine/A2A';
 export class LocationScout extends Agent {
 
 
-        get agentCard(): AgentCard {
-            return {
-                id: this.id,
-                persona: this.persona,
-                description: 'Designs the mansion layout and rooms',
-                capabilities: [
-                    { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
-                    { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
-                ]
-            };
-        }
+    get agentCard(): AgentCard {
+        return {
+            id: this.id,
+            persona: this.persona,
+            description: 'Designs the mansion layout and rooms',
+            capabilities: [
+                { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
+                { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
+            ]
+        };
+    }
 
     private genAI: GoogleGenerativeAI | null = null;
     private cachedRooms: Room[] = [];
@@ -93,35 +93,57 @@ export class LocationScout extends Agent {
             }
         }
 
-        // Merge rooms. Note: We might need to update exits of static rooms to point to new rooms if the LLM didn't doing it reciprocally (which it can't easily do for static objects).
-        // For simplicity in this prototype, we rely on the LLM to say "The Library is NORTH of the Guest Corridor"
-        // But we must manually ensure the Guest Corridor has an exit to the Library.
-        // A smarter system would double-link. For now, let's just append.
-
-        // Define staticRooms again locally since we removed the property earlier, or better yet, fetch getTestMansion() as base if we want mixed?
-        // Actually, the request implies Test Mode = strictly the test layout. Full Mode = Dynamic.
-        // But Dynamic needs a base. Let's re-introduce the base static rooms or just use getTestMansion as base?
-        // The user said "Keep the same rooms but ensure they are logically positioned" for the test mode.
-        // Let's assume for Dynamic Mode we start with getTestMansion() as the base and add on? Or maybe the original static list is better...
-        // Let's use getTestMansion() as the base for now, as it's the most up-to-date map.
-
+        // Merge rooms: base mansion + LLM-generated rooms
         let allRooms = [...this.getTestMansion(), ...extraRooms];
 
-        // Auto-fix reciprocal exits
-        extraRooms.forEach(newRoom => {
-            Object.entries(newRoom.exits).forEach(([dir, targetId]) => {
-                const targetRoom = allRooms.find(r => r.id === targetId);
-                if (targetRoom) {
-                    const opposite = this.getOppositeDir(dir);
-                    if (opposite) {
-                        targetRoom.exits[opposite] = newRoom.id;
-                    }
-                }
-            });
-        });
+        // Comprehensive grid validation and auto-fix
+        allRooms = this.validateAndFixGrid(allRooms);
 
         this.cachedRooms = allRooms;
         return allRooms;
+    }
+
+    /**
+     * Validate and fix the room grid:
+     * 1. Ensure all exits point to existing rooms
+     * 2. Ensure bidirectional exits (if A->north->B, then B->south->A)
+     * 3. Log all issues to console
+     */
+    private validateAndFixGrid(rooms: Room[]): Room[] {
+        const roomById: Record<string, Room> = {};
+        rooms.forEach(r => roomById[r.id] = r);
+
+        rooms.forEach(room => {
+            const toRemove: string[] = [];
+
+            Object.entries(room.exits).forEach(([dir, targetId]) => {
+                const target = roomById[targetId];
+
+                // Check if target exists
+                if (!target) {
+                    console.log(`Invalid grid - ${room.name}: exit "${dir}" points to non-existent room "${targetId}". Removing exit.`);
+                    toRemove.push(dir);
+                    return;
+                }
+
+                // Check for reciprocal exit
+                const opposite = this.getOppositeDir(dir);
+                if (opposite) {
+                    if (!target.exits[opposite]) {
+                        console.log(`Invalid grid - adding return path: ${target.name} now has "${opposite}" exit back to ${room.name}`);
+                        target.exits[opposite] = room.id;
+                    } else if (target.exits[opposite] !== room.id) {
+                        console.log(`Invalid grid - ${target.name} exit "${opposite}" points to ${roomById[target.exits[opposite]]?.name || target.exits[opposite]} instead of ${room.name}. Fixing.`);
+                        target.exits[opposite] = room.id;
+                    }
+                }
+            });
+
+            // Remove invalid exits
+            toRemove.forEach(dir => delete room.exits[dir]);
+        });
+
+        return rooms;
     }
 
     private getOppositeDir(dir: string): string | null {
