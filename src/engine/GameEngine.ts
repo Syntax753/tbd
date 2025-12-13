@@ -100,7 +100,7 @@ export class GameEngine {
             this.state.history.push(response);
         } else if (cmd === 'help') {
             const lines = [
-                "*** AVAILABLE COMMANDS ***",
+                "*** HELP ***",
                 "  look (l)         - Examine your surroundings",
                 "  north (n)        - Move North",
                 "  south (s)        - Move South",
@@ -119,7 +119,7 @@ export class GameEngine {
             ];
             this.state.history.push(...lines);
         } else if (cmd === 'location' || cmd === 'map') {
-            const lines = ["*** MANSION LAYOUT ***"];
+            const lines = ["*** MAP ***"];
             Object.values(this.state.map).forEach(room => {
                 lines.push(`[${room.name}] (${room.id})`);
                 Object.entries(room.exits).forEach(([dir, targetId]) => {
@@ -131,7 +131,7 @@ export class GameEngine {
             this.state.history.push(...lines);
         } else if (cmd === 'story') {
             const lines = [
-                "*** SECRET STORY ARCHIVE ***",
+                "*** STORY ***",
                 `TITLE: ${this.state.story.title}`,
                 `BACKGROUND: ${this.state.story.background}`,
                 "PLOT POINTS:",
@@ -139,7 +139,7 @@ export class GameEngine {
             ];
             this.state.history.push(...lines);
         } else if (cmd === 'schedule') {
-            const lines = ["*** CHARACTER SCHEDULES ***"];
+            const lines = ["*** SCHEDULE ***"];
             if (this.state.schedule) {
                 Object.entries(this.state.schedule).forEach(([charId, events]) => {
                     const charName = this.state.characters[charId]?.name || charId;
@@ -162,7 +162,7 @@ export class GameEngine {
             });
 
             if (result && Array.isArray(result)) {
-                const lines = ["*** CAST LIST ***"];
+                const lines = ["*** CAST ***"];
                 // @ts-ignore
                 result.forEach((c: Character) => {
                     lines.push(`${c.name} (${c.role}): ${c.bio}`);
