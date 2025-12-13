@@ -8,7 +8,7 @@ export class Writer extends Agent {
     private genAI: GoogleGenerativeAI | null = null;
 
     constructor() {
-        super('Arthur', 'Writer');
+        super('Writer', 'Arthur');
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
@@ -27,9 +27,13 @@ export class Writer extends Agent {
 
     get agentCard(): AgentCard {
         return {
-            name: this.name,
-            role: this.role,
-            capabilities: ['generate_story', 'get_story']
+            id: this.id,
+            persona: this.persona,
+            description: 'Generates the murder mystery story, plot, and secrets',
+            capabilities: [
+                { name: 'generate_story', description: 'Creates a new story manifest', outputType: 'StoryManifest' },
+                { name: 'get_story', description: 'Returns cached story', outputType: 'StoryManifest' }
+            ]
         };
     }
 

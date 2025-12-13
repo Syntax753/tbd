@@ -1,15 +1,15 @@
 import type { AgentCard, Task } from '../engine/A2A';
 
 export abstract class Agent {
-    protected name: string;
-    protected role: string;
+    protected id: string;      // PascalCase agent type (e.g., "Writer")
+    protected persona: string; // Human name (e.g., "Arthur")
 
     // A2A: Every agent must declare its capabilities
     abstract get agentCard(): AgentCard;
 
-    constructor(name: string, role: string) {
-        this.name = name;
-        this.role = role;
+    constructor(id: string, persona: string) {
+        this.id = id;
+        this.persona = persona;
     }
 
     // Legacy/Bootstrap method
@@ -17,7 +17,7 @@ export abstract class Agent {
 
     // A2A: Standardized task handler
     async handleTask(task: Task): Promise<any> {
-        console.warn(`${this.name} received task ${task.type} but has no handler.`);
+        console.warn(`${this.id} received task ${task.type} but has no handler.`);
         return null;
     }
 }

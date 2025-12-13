@@ -8,21 +8,34 @@ export class LocationScout extends Agent {
 
     get agentCard(): AgentCard {
         return {
-            name: this.name,
-            role: this.role,
-            capabilities: ['scout_location']
+            id: this.id,
+            persona: this.persona,
+            description: 'Designs the mansion layout and rooms',
+            capabilities: [
+                { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
+                { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
+            ]
         };
     }
 
     private genAI: GoogleGenerativeAI | null = null;
+    private cachedRooms: Room[] = [];
+
     constructor() {
-        super('Sarah', 'LocationScout');
+        super('LocationScout', 'Sarah');
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
         } else {
             console.warn("LocationScout: No Gemini API Key found. Using static map only.");
         }
+    }
+
+    async handleTask(task: { type: string }): Promise<any> {
+        if (task.type === 'get_rooms') {
+            return this.cachedRooms;
+        }
+        return null;
     }
 
     async work(_story: any, characters: any[]): Promise<Room[]> {
@@ -107,6 +120,7 @@ export class LocationScout extends Agent {
             });
         });
 
+        this.cachedRooms = allRooms;
         return allRooms;
     }
 

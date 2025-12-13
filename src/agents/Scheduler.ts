@@ -9,7 +9,7 @@ export class Scheduler extends Agent {
     private genAI: GoogleGenerativeAI | null = null;
 
     constructor() {
-        super('Clockwork', 'Scheduler');
+        super('Scheduler', 'Clockwork');
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
@@ -20,9 +20,13 @@ export class Scheduler extends Agent {
 
     get agentCard(): AgentCard {
         return {
-            name: this.name,
-            role: this.role,
-            capabilities: ['generate_schedule', 'get_schedule']
+            id: this.id,
+            persona: this.persona,
+            description: 'Creates timeline of character movements and events',
+            capabilities: [
+                { name: 'generate_schedule', description: 'Creates schedule from story and characters', inputType: 'StoryManifest, Character[], Room[]', outputType: 'Schedule' },
+                { name: 'get_schedule', description: 'Returns cached schedule', outputType: 'Schedule' }
+            ]
         };
     }
 

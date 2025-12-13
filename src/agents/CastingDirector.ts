@@ -1,19 +1,29 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Agent } from './Agent';
 import type { Character, StoryManifest } from '../engine/types';
 import type { AgentCard, Task } from '../engine/A2A';
 
 export class CastingDirector extends Agent {
     private cast: Character[] = [];
+    private genAI: GoogleGenerativeAI | null = null;
 
     constructor() {
-        super('Leo', 'CastingDirector');
+        super('CastingDirector', 'Leo');
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (apiKey) {
+            this.genAI = new GoogleGenerativeAI(apiKey);
+        }
     }
 
     get agentCard(): AgentCard {
         return {
-            name: this.name,
-            role: this.role,
-            capabilities: ['cast_characters', 'fetch_characters']
+            id: this.id,
+            persona: this.persona,
+            description: 'Creates cast of characters with personalities and motives',
+            capabilities: [
+                { name: 'generate_cast', description: 'Creates characters from story', inputType: 'StoryManifest', outputType: 'Character[]' },
+                { name: 'get_characters', description: 'Returns cached cast', outputType: 'Character[]' }
+            ]
         };
     }
 
@@ -29,7 +39,7 @@ export class CastingDirector extends Agent {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // TEST MODE or NO API KEY: Use fallback cast
-        if (import.meta.env.VITE_USE_TEST_DATA === 'true' || !import.meta.env.VITE_GEMINI_API_KEY) {
+        if (import.meta.env.VITE_USE_TEST_DATA === 'true' || !this.genAI) {
             console.log("CastingDirector -> TestData (Test Mode)");
             this.cast = this.getFallbackCast();
             return this.cast;
@@ -37,9 +47,7 @@ export class CastingDirector extends Agent {
 
         // FULL MODE: Generate characters based on story
         try {
-            // @ts-ignore
-            const genAI = new (await import('@google/generative-ai')).GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             const prompt = `
                 You are a casting director for a murder mystery game.

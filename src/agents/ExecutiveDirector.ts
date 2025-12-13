@@ -13,7 +13,7 @@ export class ExecutiveDirector extends Agent {
     private scheduler: Scheduler;
 
     constructor() {
-        super('Orson', 'ExecutiveDirector');
+        super('ExecutiveDirector', 'Orson');
         this.writer = new Writer();
         this.locationScout = new LocationScout();
         this.castingDirector = new CastingDirector();
@@ -22,9 +22,13 @@ export class ExecutiveDirector extends Agent {
 
     get agentCard(): AgentCard {
         return {
-            name: this.name,
-            role: this.role,
-            capabilities: ['orchestrate', 'fetch_info']
+            id: this.id,
+            persona: this.persona,
+            description: 'Orchestrates all agents to produce a complete murder mystery',
+            capabilities: [
+                { name: 'orchestrate', description: 'Runs the full production pipeline', outputType: 'GameState' },
+                { name: 'dispatch', description: 'Routes tasks to appropriate agents', inputType: 'Task', outputType: 'any' }
+            ]
         };
     }
 
@@ -63,25 +67,21 @@ export class ExecutiveDirector extends Agent {
 
         console.log("ExecutiveDirector -> LocationScout<generate_location>");
         if (onProgress) onProgress("The LocationScout is designing the manor...");
-        // @ts-ignore
         const rooms = await this.locationScout.work(story, charactersList);
 
         console.log("ExecutiveDirector -> Scheduler<generate_schedule>");
         if (onProgress) onProgress("The Scheduler is setting the scene...");
-        // @ts-ignore
         const schedule = await this.scheduler.work(story, charactersList, rooms);
 
         console.log("### End of Production ###");
 
         // Assemble the game state
         const map: Record<string, Room> = {};
-        // @ts-ignore
         rooms.forEach((room: Room) => {
             map[room.id] = room;
         });
 
         const characters: Record<string, Character> = {};
-        // @ts-ignore
         charactersList.forEach((char: Character) => {
             // Place everyone in the Foyer initially (or respect schedule later)
             char.currentRoomId = 'foyer';
