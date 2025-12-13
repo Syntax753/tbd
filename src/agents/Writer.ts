@@ -37,16 +37,16 @@ export class Writer extends Agent {
         };
     }
 
-    async work(): Promise<StoryManifest> {
+    async work(useTestData: boolean = false): Promise<StoryManifest> {
         console.log("Writer: Picks up the pen");
-        const story = await this.generateStoryFromLLM();
+        const story = await this.generateStoryFromLLM(useTestData);
         this.cachedStory = story;
         return story;
     }
 
-    private async generateStoryFromLLM(): Promise<StoryManifest> {
-        // TEST MODE: Force fallback story if VITE_USE_TEST_DATA is set
-        if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
+    private async generateStoryFromLLM(useTestData: boolean): Promise<StoryManifest> {
+        // TEST MODE: Force fallback story if useTestData is true
+        if (useTestData) {
             console.log("Writer -> TestData (Test Mode)");
             return this.getFallbackStory();
         }

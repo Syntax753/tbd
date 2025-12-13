@@ -34,12 +34,12 @@ export class CastingDirector extends Agent {
         return null;
     }
 
-    async work(story: StoryManifest): Promise<Character[]> {
+    async work(story: StoryManifest, useTestData: boolean = false): Promise<Character[]> {
         console.log("CastingDirector: Reviewing script and starting auditions...");
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // TEST MODE or NO API KEY: Use fallback cast
-        if (import.meta.env.VITE_USE_TEST_DATA === 'true' || !this.genAI) {
+        if (useTestData || !this.genAI) {
             console.log("CastingDirector -> TestData (Test Mode)");
             this.cast = this.getFallbackCast();
             return this.cast;

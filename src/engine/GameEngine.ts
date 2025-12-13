@@ -127,7 +127,8 @@ export class GameEngine {
                     const charName = this.state.characters[charId]?.name || charId;
                     commandOutput.push(`[${charName}]`);
                     events.forEach(e => {
-                        commandOutput.push(`  ${e.time} - ${e.action} (@${e.locationId})`);
+                        const roomName = this.state.map[e.locationId]?.name || e.locationId;
+                        commandOutput.push(`  ${e.time} - ${e.action} (${roomName})`);
                     });
                     commandOutput.push(""); // spacer
                 });
@@ -163,7 +164,11 @@ export class GameEngine {
             id: 'tick',
             type: 'tick',
             status: 'submitted',
-            payload: { time: this.state.time, playerRoomId: this.state.currentRoomId }
+            payload: {
+                time: this.state.time,
+                playerRoomId: this.state.currentRoomId,
+                characters: this.state.characters
+            }
         });
 
         // Add movement messages to output

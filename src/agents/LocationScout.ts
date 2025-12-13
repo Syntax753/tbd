@@ -38,10 +38,10 @@ export class LocationScout extends Agent {
         return null;
     }
 
-    async work(_story: any, characters: any[]): Promise<Room[]> {
+    async work(_story: any, characters: any[], useTestData: boolean = false): Promise<Room[]> {
         console.log("LocationScout: Reviewing script and starting room scouting...");
-        // TEST MODE: Use hardcoded mansion if VITE_USE_TEST_DATA is set
-        if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
+        // TEST MODE: Use hardcoded mansion if useTestData is true
+        if (useTestData) {
             console.log("LocationScout -> TestData (Test Mode)");
             return this.getTestMansion();
         }

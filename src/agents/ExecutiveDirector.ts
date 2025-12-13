@@ -54,7 +54,7 @@ export class ExecutiveDirector extends Agent {
         }
 
         if (task.type === 'tick') {
-            return this.tick(task.payload?.time, task.payload?.playerRoomId);
+            return this.tick(task.payload?.time, task.payload?.playerRoomId, task.payload?.characters || {});
         }
 
         return null;
@@ -62,34 +62,73 @@ export class ExecutiveDirector extends Agent {
 
     /**
      * Gameplay loop tick - called after each player turn.
-     * Updates character positions based on current time.
+     * Uses Scheduler to determine who needs to move, then uses Grafitti to move them.
      */
-    tick(currentTime: string, playerRoomId: string): string[] {
+    tick(currentTime: string, playerRoomId: string, characters: Record<string, { id: string; name: string; currentRoomId: string }>): string[] {
         console.log(`ExecutiveDirector: Tick at ${currentTime}`);
-        return this.destiny.updatePositions(currentTime, playerRoomId);
+
+        const messages: string[] = [];
+
+        // Get movement requests from Scheduler
+        const movements = this.scheduler.tick(currentTime, characters);
+
+        // Process each movement using Grafitti for pathfinding
+        for (const move of movements) {
+            const currentRoom = grafitti.getCharacterRoom(move.charId) || move.from;
+
+            // Get next step towards target
+            const nextStep = grafitti.getNextStep(currentRoom, move.to);
+            if (!nextStep) continue; // No path or already there
+
+            // Move character one step
+            const oldRoom = currentRoom;
+            grafitti.moveCharacter(move.charId, nextStep);
+
+            // Update character object
+            const char = characters[move.charId];
+            if (char) char.currentRoomId = nextStep;
+
+            // Generate messages if player is in affected rooms
+            if (playerRoomId === oldRoom) {
+                const direction = grafitti.getDirection(oldRoom, nextStep);
+                messages.push(`${move.charName} leaves to the ${direction?.toUpperCase() || 'somewhere'}.`);
+            }
+            if (playerRoomId === nextStep) {
+                const direction = grafitti.getDirection(nextStep, oldRoom);
+                messages.push(`${move.charName} enters from the ${direction?.toUpperCase() || 'somewhere'}.`);
+            }
+        }
+
+        return messages;
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {
         console.log("ExecutiveDirector: Starting production...");
+
+        // Determine test mode from environment - this is the single source of truth
+        const useTestData = import.meta.env.VITE_USE_TEST_DATA === 'true';
+        if (useTestData) {
+            console.log("ExecutiveDirector: Running in TEST MODE");
+        }
 
         console.log("### Starting a new Production ###");
 
         // Executive Director runs the production pipeline sequentially
         console.log("ExecutiveDirector -> Writer<generate_story>");
         if (onProgress) onProgress("The Writer is drafting the plot...");
-        const story = await this.writer.work();
+        const story = await this.writer.work(useTestData);
 
         console.log("ExecutiveDirector -> CastingDirector<generate_cast>");
         if (onProgress) onProgress("The CastingDirector is hiring 8 suspects...");
-        const charactersList = await this.castingDirector.work(story);
+        const charactersList = await this.castingDirector.work(story, useTestData);
 
         console.log("ExecutiveDirector -> LocationScout<generate_location>");
         if (onProgress) onProgress("The LocationScout is designing the manor...");
-        const rooms = await this.locationScout.work(story, charactersList);
+        const rooms = await this.locationScout.work(story, charactersList, useTestData);
 
         console.log("ExecutiveDirector -> Scheduler<generate_schedule>");
         if (onProgress) onProgress("The Scheduler is setting the scene...");
-        const schedule = await this.scheduler.work(story, charactersList, rooms);
+        const schedule = await this.scheduler.work(story, charactersList, rooms, useTestData);
 
         console.log("### End of Production ###");
 

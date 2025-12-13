@@ -37,7 +37,7 @@ export class Scheduler extends Agent {
         return null;
     }
 
-    async work(story: StoryManifest, characters: any[], rooms: any[]): Promise<Schedule> {
+    async work(story: StoryManifest, characters: any[], rooms: any[], useTestData: boolean = false): Promise<Schedule> {
         // Simulating "scheduling" based on the story
         await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -56,8 +56,8 @@ export class Scheduler extends Agent {
             schedule[char.id] = JSON.parse(JSON.stringify(baseTimeline));
         });
 
-        // TEST MODE: Use hardcoded schedule if VITE_USE_TEST_DATA is set
-        if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
+        // TEST MODE: Use hardcoded schedule if useTestData is true
+        if (useTestData) {
             console.log("Scheduler -> TestData (Test Mode)");
             const dynamicSchedule = this.getTestSchedule();
 
@@ -165,14 +165,78 @@ export class Scheduler extends Agent {
             schedule[char.id].sort((a, b) => a.time.localeCompare(b.time));
         });
 
-        // INJECT TRAVEL EVENTS (Pathfinding)
-        // Convert rooms array to map for easier lookup
-        const roomMap: Record<string, any> = {};
-        rooms.forEach((r: any) => roomMap[r.id] = r);
-        this.injectTravelEvents(schedule, roomMap);
+        // Note: Travel events are now handled at runtime by the tick method
+        // Characters stay in place until they need to move towards their next event
 
         this.cachedSchedule = schedule;
         return schedule;
+    }
+
+    /**
+     * Tick method - called each game turn to update character positions.
+     * Returns movement data for characters who should move.
+     */
+    tick(currentTime: string, characters: Record<string, { id: string; name: string; currentRoomId: string }>): { charId: string; charName: string; from: string; to: string }[] {
+
+        if (!this.cachedSchedule) return [];
+
+        const movements: { charId: string; charName: string; from: string; to: string }[] = [];
+        const currentMinutes = this.timeToMinutes(currentTime);
+
+        Object.keys(this.cachedSchedule).forEach(charId => {
+            const char = characters[charId];
+            if (!char) return;
+
+            const events = this.cachedSchedule![charId];
+            if (!events || events.length === 0) return;
+
+            // Find where the character should be heading
+            const targetEvent = this.getTargetEvent(events, currentMinutes);
+            if (!targetEvent) return;
+
+            const currentRoom = char.currentRoomId;
+            const targetRoom = targetEvent.locationId;
+
+            // If already at target, stay put - no movement needed
+            if (currentRoom === targetRoom) return;
+
+            // Character needs to move towards target
+            // This will be processed by Grafitti/Destiny to get next step
+            movements.push({
+                charId,
+                charName: char.name,
+                from: currentRoom,
+                to: targetRoom
+            });
+        });
+
+        return movements;
+    }
+
+    /**
+     * Find the event the character should be heading towards.
+     * Returns the most recent scheduled event at or before currentTime,
+     * OR the next upcoming event if they need to be traveling.
+     */
+    private getTargetEvent(events: { time: string; action: string; locationId: string }[], currentMinutes: number): { time: string; action: string; locationId: string } | null {
+
+        // Find current event (most recent one that has started)
+        let currentEvent = null;
+        let nextEvent = null;
+
+        for (const event of events) {
+            const eventMinutes = this.timeToMinutes(event.time);
+            if (eventMinutes <= currentMinutes) {
+                currentEvent = event;
+            } else {
+                nextEvent = event;
+                break;
+            }
+        }
+
+        // If there's a current event, character should be there
+        // If there's a next event coming up, check if they need to start traveling
+        return currentEvent;
     }
 
     private injectTravelEvents(schedule: Schedule, roomMap: Record<string, any>) {
