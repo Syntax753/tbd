@@ -40,7 +40,10 @@ export class ExecutiveDirector extends Agent {
 
     // A2A Router: Dispatch task to the right agent
     async dispatch(task: Task): Promise<any> {
-        console.log(`ExecutiveDirector: Dispatching task [${task.type}]...`);
+        // Don't log tick tasks - too noisy
+        if (task.type !== 'tick') {
+            console.log(`ExecutiveDirector: Dispatching task [${task.type}]...`);
+        }
 
         if (task.type === 'get_characters') {
             return this.castingDirector.handleTask({ ...task, type: 'fetch_characters' });
@@ -66,8 +69,6 @@ export class ExecutiveDirector extends Agent {
      * Uses Scheduler to determine who needs to move, then uses Grafitti to move them.
      */
     tick(currentTime: string, playerRoomId: string, characters: Record<string, { id: string; name: string; currentRoomId: string }>): string[] {
-        console.log(`ExecutiveDirector: Tick at ${currentTime}`);
-
         const messages: string[] = [];
 
         // Get movement requests from Scheduler
