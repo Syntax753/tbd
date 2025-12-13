@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import './App.css';
 import { GameEngine } from './engine/GameEngine';
 import { Terminal } from './components/Terminal';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MapView } from './components/MapView';
+import { ConfigScreen } from './components/ConfigScreen';
+import type { GameConfig } from './components/ConfigScreen';
 import { grafitti } from './engine/RoomGraph';
+
 
 function App() {
   const [engine] = useState(() => new GameEngine());
-  const [isLoading, setIsLoading] = useState(true);
+  const [showConfig, setShowConfig] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setIsLoadingMessage] = useState("Initializing...");
   const [history, setHistory] = useState<string[]>([]);
   const [showMap, setShowMap] = useState(false);
@@ -16,23 +20,22 @@ function App() {
   // To verify if initialization has run
   const initialized = useRef(false);
 
-  useEffect(() => {
+  const handleConfigSubmit = async (config: GameConfig) => {
     if (initialized.current) return;
     initialized.current = true;
 
-    const initGame = async () => {
-      // Pass callback to update loading message
-      await engine.initialize((msg) => setIsLoadingMessage(msg));
+    setShowConfig(false);
+    setIsLoading(true);
 
-      // Initialize room graph for pathfinding
-      grafitti.initialize(engine.getState().map);
+    // Pass callback to update loading message and config
+    await engine.initialize((msg) => setIsLoadingMessage(msg), config);
 
-      setHistory(engine.getHistory());
-      setIsLoading(false);
-    };
+    // Initialize room graph for pathfinding
+    grafitti.initialize(engine.getState().map);
 
-    initGame();
-  }, [engine]);
+    setHistory(engine.getHistory());
+    setIsLoading(false);
+  };
 
   const handleCommand = async (cmd: string) => {
     // Check for map command to toggle graphical map
@@ -52,6 +55,10 @@ function App() {
     // Update from engine state (single source of truth)
     setHistory([...engine.getHistory()]);
   };
+
+  if (showConfig) {
+    return <ConfigScreen onStart={handleConfigSubmit} />;
+  }
 
   if (isLoading) {
     return <LoadingScreen message={loadingMessage} />;

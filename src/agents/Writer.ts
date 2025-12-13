@@ -37,14 +37,14 @@ export class Writer extends Agent {
         };
     }
 
-    async work(useTestData: boolean = false): Promise<StoryManifest> {
+    async work(useTestData: boolean = false, storySetting?: string, characterTypes?: string, deceasedName?: string): Promise<StoryManifest> {
         console.log("Writer: Picks up the pen");
-        const story = await this.generateStoryFromLLM(useTestData);
+        const story = await this.generateStoryFromLLM(useTestData, storySetting, characterTypes, deceasedName);
         this.cachedStory = story;
         return story;
     }
 
-    private async generateStoryFromLLM(useTestData: boolean): Promise<StoryManifest> {
+    private async generateStoryFromLLM(useTestData: boolean, storySetting?: string, characterTypes?: string, deceasedName?: string): Promise<StoryManifest> {
         // TEST MODE: Force fallback story if useTestData is true
         if (useTestData) {
             console.log("Writer -> TestData (Test Mode)");
@@ -56,12 +56,18 @@ export class Writer extends Agent {
             return this.getFallbackStory();
         }
 
+        // Build customized prompt based on player config
+        const setting = storySetting || 'a grand mansion';
+        const charType = characterTypes || 'aristocrats and socialites';
+        const victimName = deceasedName || 'Archibald Thorne';
+
         try {
             const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             const prompt = `
                 You are a mystery writer. Create a murder mystery story manifest for a text adventure game.
-                The setting is a mansion.
-                The host, Archibald Thorne, is found dead at midnight.
+                The setting is ${setting}.
+                The characters should be ${charType}.
+                The host, ${victimName}, is found dead at midnight.
                 The game starts at 18:00.
                 
                 Respond ONLY with valid JSON matching this interface:

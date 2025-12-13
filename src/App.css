@@ -288,3 +288,102 @@
 .exit-item {
   color: #0f0;
 }
+
+/* Config Screen - Console Style */
+.config-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  color: #0f0;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 20px;
+}
+
+.config-container h1 {
+  color: #0f0;
+  text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  letter-spacing: 0.1em;
+}
+
+.config-subtitle {
+  color: #0a0;
+  font-size: 1rem;
+  margin-bottom: 30px;
+  letter-spacing: 0.3em;
+  border-bottom: 1px solid #0f0;
+  padding-bottom: 10px;
+}
+
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.config-label {
+  color: #0f0;
+  font-size: 0.9rem;
+  text-shadow: 0 0 5px #0f0;
+}
+
+.config-input {
+  background: #0a0a0a;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  color: #0f0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  padding: 12px 15px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.config-input::placeholder {
+  color: #050;
+  opacity: 0.7;
+}
+
+.config-input:focus {
+  border-color: #0f0;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.config-start-btn {
+  margin-top: 30px;
+  background: transparent;
+  border: 2px solid #0f0;
+  color: #0f0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.2rem;
+  padding: 15px 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 5px #0f0;
+  letter-spacing: 0.1em;
+}
+
+.config-start-btn:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+}
+
+.config-hint {
+  margin-top: 20px;
+  color: #050;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}

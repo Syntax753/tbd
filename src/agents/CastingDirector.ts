@@ -34,7 +34,7 @@ export class CastingDirector extends Agent {
         return null;
     }
 
-    async work(story: StoryManifest, useTestData: boolean = false): Promise<Character[]> {
+    async work(story: StoryManifest, useTestData: boolean = false, suspectCount: number = 5, characterTypes?: string): Promise<Character[]> {
         console.log("CastingDirector: Reviewing script and starting auditions...");
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -45,13 +45,17 @@ export class CastingDirector extends Agent {
             return this.cast;
         }
 
+        // Build character type description
+        const charTypeDesc = characterTypes || 'aristocrats, socialites, and servants';
+
         // FULL MODE: Generate characters based on story
         try {
             const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             const prompt = `
                 You are a casting director for a murder mystery game.
-                Based on the following story, create 4-5 unique characters (including the victim if applicable, though usually they are pre-defined in the story context).
+                Based on the following story, create exactly ${suspectCount} unique characters.
+                The characters should be ${charTypeDesc}.
                 
                 Story Title: ${story.title}
                 Background: ${story.background}

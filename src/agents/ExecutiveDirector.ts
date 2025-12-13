@@ -171,8 +171,11 @@ export class ExecutiveDirector extends Agent {
         return this.destiny.getEventResponse(charId, memory);
     }
 
-    async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {
+    async work(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }): Promise<Partial<GameState>> {
         console.log("ExecutiveDirector: Starting production...");
+        if (config) {
+            console.log("ExecutiveDirector: Using player config:", config);
+        }
 
         // Determine test mode from environment - this is the single source of truth
         const useTestData = import.meta.env.VITE_USE_TEST_DATA === 'true';
@@ -185,11 +188,12 @@ export class ExecutiveDirector extends Agent {
         // Executive Director runs the production pipeline sequentially
         console.log("ExecutiveDirector -> Writer<generate_story>");
         if (onProgress) onProgress("The Writer is drafting the plot...");
-        const story = await this.writer.work(useTestData);
+        const story = await this.writer.work(useTestData, config?.storySetting, config?.characterTypes, config?.deceasedName);
 
         console.log("ExecutiveDirector -> CastingDirector<generate_cast>");
         if (onProgress) onProgress("The CastingDirector is auditioning suspects...");
-        const charactersList = await this.castingDirector.work(story, useTestData);
+        const suspectCount = parseInt(config?.suspectCount || '5', 10) || 5;
+        const charactersList = await this.castingDirector.work(story, useTestData, suspectCount, config?.characterTypes);
         if (onProgress) onProgress(`The CastingDirector hired ${charactersList.length} suspects!`);
 
         console.log("ExecutiveDirector -> LocationScout<generate_location>");

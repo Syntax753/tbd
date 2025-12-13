@@ -25,8 +25,8 @@ export class GameEngine {
 
     private lastAnnouncedTime: Record<string, string> = {};
 
-    async initialize(onProgress?: (msg: string) => void): Promise<void> {
-        const partialState = await this.executive.work(onProgress);
+    async initialize(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }): Promise<void> {
+        const partialState = await this.executive.work(onProgress, config);
         this.state = {
             ...this.state,
             ...partialState,
