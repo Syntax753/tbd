@@ -65,7 +65,8 @@ export class GameEngine {
             'w': 'west',
             'u': 'up',
             'd': 'down',
-            'i': 'inventory'
+            'i': 'inventory',
+            'ask': 'talk'
         };
 
         const actualVerb = shortcuts[verb] || verb;
