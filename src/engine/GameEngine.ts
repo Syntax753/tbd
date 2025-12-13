@@ -49,9 +49,9 @@ export class GameEngine {
         if (this.state.isGameOver) return "The game is over. Archibald is dead.";
 
         const cmd = input.trim().toLowerCase();
-        this.state.history.push(`> ${input}`);
 
         let response = "";
+        let commandOutput: string[] = [];
         const parts = cmd.split(' ');
         const verb = parts[0];
         const noun = parts.slice(1).join(' ');
@@ -73,34 +73,28 @@ export class GameEngine {
         if (actualVerb === 'look') {
             this.advanceTime(5);
             if (this.state.isGameOver) {
-                const msg = "MIDNIGHT: Archibald is found dead! Game Over.";
-                this.state.history.push(msg);
-                return msg;
+                commandOutput = ["MIDNIGHT: Archibald is found dead! Game Over."];
             }
-            response = this.handleLook();
-            this.state.history.push(response);
+            // Just refresh - no extra output for look
         } else if (['north', 'south', 'east', 'west', 'up', 'down'].includes(actualVerb)) {
             response = this.handleMove(actualVerb);
+            if (response) commandOutput = [response];
         } else if (verb === 'go' && noun) {
             const dir = shortcuts[noun] || noun;
             if (['north', 'south', 'east', 'west', 'up', 'down'].includes(dir)) {
                 response = this.handleMove(dir);
+                if (response) commandOutput = [response];
             } else {
-                response = "You can't go that way.";
-                this.state.history.push(response);
+                commandOutput = ["You can't go that way."];
             }
         } else if (actualVerb === 'wait') {
-            this.state.history.push("You wait for 5 minutes...");
+            commandOutput = ["You wait for 5 minutes..."];
             this.advanceTime(5);
-            response = "Time passes..."; // History update happens in advanceTime indirectly via logs or just the push above
-            // Actually, we usually want to see what happens after time passes, so let's essentially do a 'look' or just show events?
-            // The user req says: "actions should be displayed... movement made... description of person entering/exiting displayed".
-            // These messages are pushed to history in updateCharacterLocations.
         } else if (actualVerb === 'talk') {
             response = this.handleTalk(noun);
-            this.state.history.push(response);
+            commandOutput = [response];
         } else if (cmd === 'help') {
-            const lines = [
+            commandOutput = [
                 "*** HELP ***",
                 "  look (l)         - Examine your surroundings",
                 "  north (n)        - Move North",
@@ -112,40 +106,34 @@ export class GameEngine {
                 "  talk <name>      - Talk to a character",
                 "  wait             - Wait for 5 minutes",
                 "  inventory (i)    - Check your inventory",
-                "  location (map)   - List all rooms and connections",
+                "  location (map)   - View the graphical map",
                 "  story            - Review the story so far",
                 "  schedule         - (Debug) View character schedules",
                 "  characters       - (Debug) View character bios",
                 "  help             - Show this message"
             ];
-            this.state.history.push(...lines);
-        } else if (cmd === 'location' || cmd === 'map') {
-            const lines = this.generateAsciiMap();
-            this.state.history.push(...lines);
         } else if (cmd === 'story') {
-            const lines = [
+            commandOutput = [
                 "*** STORY ***",
                 `TITLE: ${this.state.story.title}`,
                 `BACKGROUND: ${this.state.story.background}`,
                 "PLOT POINTS:",
                 ... (this.state.story.plotAndSecrets || ["No secrets found."])
             ];
-            this.state.history.push(...lines);
         } else if (cmd === 'schedule') {
-            const lines = ["*** SCHEDULE ***"];
+            commandOutput = ["*** SCHEDULE ***"];
             if (this.state.schedule) {
                 Object.entries(this.state.schedule).forEach(([charId, events]) => {
                     const charName = this.state.characters[charId]?.name || charId;
-                    lines.push(`[${charName}]`);
+                    commandOutput.push(`[${charName}]`);
                     events.forEach(e => {
-                        lines.push(`  ${e.time} - ${e.action} (@${e.locationId})`);
+                        commandOutput.push(`  ${e.time} - ${e.action} (@${e.locationId})`);
                     });
-                    lines.push(""); // spacer
+                    commandOutput.push(""); // spacer
                 });
             } else {
-                lines.push("No schedule found.");
+                commandOutput.push("No schedule found.");
             }
-            this.state.history.push(...lines);
         } else if (cmd === 'characters') {
             // A2A: Dispatch task to Executive Director
             const result = await this.executive.dispatch({
@@ -155,46 +143,74 @@ export class GameEngine {
             });
 
             if (result && Array.isArray(result)) {
-                const lines = ["*** CAST ***"];
+                commandOutput = ["*** CAST ***"];
                 // @ts-ignore
                 result.forEach((c: Character) => {
-                    lines.push(`${c.name} (${c.role}): ${c.bio}`);
+                    commandOutput.push(`${c.name} (${c.role}): ${c.bio}`);
                 });
-                this.state.history.push(...lines);
             } else {
-                this.state.history.push("No characters found.");
+                commandOutput = ["No characters found."];
             }
+        } else if (cmd === 'location' || cmd === 'map') {
+            // Map is handled by UI, skip refresh
+            return "";
         } else {
-            response = "I don't understand that command.";
-            this.state.history.push(response);
+            commandOutput = ["I don't understand that command."];
         }
+
+        // Refresh display with the structured format
+        this.refreshDisplay(commandOutput);
 
         return response;
     }
 
-    private handleLook(): string {
+    /**
+     * Refresh the display with standard format:
+     * 1. Room description
+     * 2. Blank line
+     * 3. Characters/actions
+     * 4. Blank line
+     * 5. Command output (passed in)
+     */
+    private refreshDisplay(commandOutput: string[] = []) {
+        // Clear history
+        this.state.history = [];
+
+        // 1. Room description
         const room = this.state.map[this.state.currentRoomId];
-        if (!room) return "You are in void.";
+        if (room) {
+            this.state.history.push(room.description);
+        }
 
-        // Room name and exits are now shown in the UI, just show description
-        let desc = room.description;
+        // 2. Blank line
+        this.state.history.push("");
 
-        // List characters
-        const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room.id);
+        // 3. Characters and their actions
+        const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room?.id);
         if (charsHere.length > 0) {
-            const names = charsHere.map(c => `${colorName(c.name)} is here.`).join(' ');
-            desc += `\n\n${names}`;
-
-            // Show current action if available
             charsHere.forEach(c => {
                 const currentEvent = this.getCurrentEvent(c.id);
-                if (currentEvent && currentEvent.locationId === room.id) {
-                    desc += `\n${colorName(c.name)}: ${currentEvent.action}`;
+                if (currentEvent && currentEvent.locationId === room?.id) {
+                    this.state.history.push(`${colorName(c.name)}: ${currentEvent.action}`);
+                } else {
+                    this.state.history.push(`${colorName(c.name)} is here.`);
                 }
             });
         }
 
-        return desc;
+        // 4. Blank line before command output
+        if (commandOutput.length > 0) {
+            this.state.history.push("");
+        }
+
+        // 5. Command output
+        commandOutput.forEach(line => this.state.history.push(line));
+    }
+
+    private handleLook(): string {
+        // Just refresh display with no extra output
+        this.refreshDisplay();
+        return "";
     }
 
     private handleMove(direction: string): string {
