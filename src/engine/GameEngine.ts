@@ -91,6 +91,8 @@ export class GameEngine {
         } else if (actualVerb === 'wait') {
             commandOutput = ["You wait for 5 minutes..."];
             this.advanceTime(5);
+        } else if (cmd === 'dopefish') {
+            commandOutput = ["You Win - The Dopefish Lives"];
         } else if (cmd === 'help') {
             commandOutput = [
                 "*** HELP ***",
