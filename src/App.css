@@ -1,8 +1,12 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
 .logo {
@@ -11,9 +15,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -22,6 +28,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -41,13 +48,96 @@
   color: #888;
 }
 
+/* Main Game Layout */
+/* Main Game Layout */
+/* Main Game Layout */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  /* 90% of window height */
+  width: 90vw;
+  /* 90% of window width */
+  max-width: none;
+  /* Remove constraint */
+  margin: 0 auto;
+  /* Horizontal center. Vertical centering depends on parent, but 90vh leaves little room. */
+  /* To center vertically in the viewport if #root allows: */
+  /* Check if #root padding interferes. usually 2rem ~ 32px. */
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+/* CRT Monitor Area (Top) */
+.crt-monitor {
+  flex: 1;
+  /* Takes available space */
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1a1a;
+  border: 3px solid #333;
+  /* CRT Bezel */
+  border-radius: 10px;
+  /* Slight curve */
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  /* Screen depth */
+}
+
+/* Terminal Area (Inside Monitor) */
+.terminal-output {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 10px;
+  /* Space for scrollbar */
+}
+
+/* Control Bar (Bottom) */
+.control-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  height: 60px;
+  width: 100%;
+}
+
+.terminal-input-form {
+  flex: 1;
+  /* Takes remaining space */
+  display: flex;
+  align-items: center;
+  background-color: #111;
+  border: 1px solid #333;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.terminal-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #eee;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.2rem;
+  outline: none;
+  margin-left: 10px;
+}
+
+.prompt {
+  color: #0f0;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
 .clock {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    font-size: 2rem;
-    color: #0f0;
-    text-shadow: 0 0 10px #0f0;
-    font-family: 'Courier New', Courier, monospace;
-    z-index: 100;
+  font-size: 2rem;
+  color: #0f0;
+  text-shadow: 0 0 10px #0f0;
+  font-family: 'Courier New', Courier, monospace;
+  /* No borders/margins needed in flex row */
+  white-space: nowrap;
 }

@@ -35,27 +35,34 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
     };
 
     return (
-        <div className="terminal-container">
-            {time && <div className="clock">{time}</div>}
-            <div className="terminal-output">
-                {history.map((line, index) => (
-                    <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
-                        {line}
-                    </div>
-                ))}
-                <div ref={endRef} />
+        <div className="game-container">
+            {/* CRT Monitor Area for Output Only */}
+            <div className="crt-monitor">
+                <div className="terminal-output">
+                    {history.map((line, index) => (
+                        <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
+                            {line}
+                        </div>
+                    ))}
+                    <div ref={endRef} />
+                </div>
             </div>
-            <form onSubmit={handleSubmit} className="terminal-input-form">
-                <span className="prompt">{'>'}</span>
-                <input
-                    ref={inputRef}
-                    autoFocus
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="terminal-input"
-                />
-            </form>
+
+            {/* Control Bar: Input + Clock */}
+            <div className="control-bar">
+                <form onSubmit={handleSubmit} className="terminal-input-form">
+                    <span className="prompt">{'>'}</span>
+                    <input
+                        ref={inputRef}
+                        autoFocus
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        className="terminal-input"
+                    />
+                </form>
+                {time && <div className="clock">{time}</div>}
+            </div>
         </div>
     );
 };
