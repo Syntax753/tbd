@@ -7,6 +7,7 @@ import { Destiny } from './Destiny';
 import type { AgentCard, Task } from '../engine/A2A';
 import type { GameState, Room, Character } from '../engine/types';
 import { grafitti } from '../engine/RoomGraph';
+import { colorName } from '../utils/colors';
 
 export class ExecutiveDirector extends Agent {
     private writer: Writer;
@@ -90,12 +91,12 @@ export class ExecutiveDirector extends Agent {
 
             // Generate messages if player is in affected rooms
             if (playerRoomId === oldRoom) {
-                const direction = grafitti.getDirection(oldRoom, nextStep);
-                messages.push(`${move.charName} leaves to the ${direction?.toUpperCase() || 'somewhere'}.`);
+                const destRoomName = grafitti.getRoom(nextStep)?.name || nextStep;
+                messages.push(`${colorName(move.charName)} leaves to the ${destRoomName}.`);
             }
             if (playerRoomId === nextStep) {
-                const direction = grafitti.getDirection(nextStep, oldRoom);
-                messages.push(`${move.charName} enters from the ${direction?.toUpperCase() || 'somewhere'}.`);
+                const srcRoomName = grafitti.getRoom(oldRoom)?.name || oldRoom;
+                messages.push(`${colorName(move.charName)} enters the room from the ${srcRoomName}.`);
             }
         }
 
@@ -152,13 +153,28 @@ export class ExecutiveDirector extends Agent {
         // Initialize Destiny with schedule and characters
         this.destiny.initialize(schedule, characters);
 
+        // Build initial history with intro and starting events (18:00)
+        const initialHistory: string[] = [story.intro, ""];
+
+        // Add 18:00 events for all characters
+        Object.entries(schedule).forEach(([charId, events]) => {
+            const char = characters[charId];
+            if (!char) return;
+
+            // Find 18:00 event
+            const startEvent = events.find(e => e.time === '18:00');
+            if (startEvent) {
+                initialHistory.push(`${colorName(char.name)}: ${startEvent.action}`);
+            }
+        });
+
         return {
             story,
             map,
             characters,
             schedule,
             currentRoomId: 'foyer', // Player start
-            history: [story.intro]
+            history: initialHistory
         };
     }
 }

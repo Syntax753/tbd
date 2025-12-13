@@ -125,7 +125,7 @@ export class GameEngine {
             if (this.state.schedule) {
                 Object.entries(this.state.schedule).forEach(([charId, events]) => {
                     const charName = this.state.characters[charId]?.name || charId;
-                    commandOutput.push(`[${charName}]`);
+                    commandOutput.push(`[${colorName(charName)}]`);
                     events.forEach(e => {
                         const roomName = this.state.map[e.locationId]?.name || e.locationId;
                         commandOutput.push(`  ${e.time} - ${e.action} (${roomName})`);
@@ -145,9 +145,8 @@ export class GameEngine {
 
             if (result && Array.isArray(result)) {
                 commandOutput = ["*** CAST ***"];
-                // @ts-ignore
                 result.forEach((c: Character) => {
-                    commandOutput.push(`${c.name} (${c.role}): ${c.bio}`);
+                    commandOutput.push(`${colorName(c.name)} (${c.role}): ${c.bio}`);
                 });
             } else {
                 commandOutput = ["No characters found."];
