@@ -64,6 +64,34 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
         }
     };
 
+    // Parse [[#HEX:text]] markup into colored spans
+    const renderLine = (line: string) => {
+        const parts: React.ReactNode[] = [];
+        const regex = /\[\[(#[A-Fa-f0-9]{6}):([^\]]+)\]\]/g;
+        let lastIndex = 0;
+        let match;
+        let keyCounter = 0;
+
+        while ((match = regex.exec(line)) !== null) {
+            // Add text before match
+            if (match.index > lastIndex) {
+                parts.push(line.slice(lastIndex, match.index));
+            }
+            // Add colored span
+            parts.push(
+                <span key={keyCounter++} style={{ color: match[1], fontWeight: 'bold' }}>
+                    {match[2]}
+                </span>
+            );
+            lastIndex = regex.lastIndex;
+        }
+        // Add remaining text
+        if (lastIndex < line.length) {
+            parts.push(line.slice(lastIndex));
+        }
+        return parts.length > 0 ? parts : line;
+    };
+
     return (
         <div className="game-container">
             {/* CRT Monitor Area for Output Only */}
@@ -71,7 +99,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, onCommand }) 
                 <div className="terminal-output">
                     {history.map((line, index) => (
                         <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
-                            {line}
+                            {renderLine(line)}
                         </div>
                     ))}
                     <div ref={endRef} />

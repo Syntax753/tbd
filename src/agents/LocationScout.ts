@@ -61,7 +61,7 @@ export class LocationScout extends Agent {
                     You are an architect for a murder mystery game.
                     The mansion has these existing rooms: Foyer, Dining Room, Kitchen, Living Room, Upper Landing, Guest Corridor.
                     
-                    Based on the following characters, generate 3 NEW unique rooms that would fit their personalities or roles (e.g. a Library for a smart character, a Garden for a nature lover, a Lab for a doctor).
+                    Based on the following characters, generate one unique rooms per character OTHER THAN that would fit their personalities or roles (e.g. a Library for a smart character, a Garden for a nature lover, a Lab for a doctor).
                     
                     IMPORTANT:
                     1. Assign each new room a unique 'id' (lowercase, underscores).

@@ -3,12 +3,14 @@ import './App.css';
 import { GameEngine } from './engine/GameEngine';
 import { Terminal } from './components/Terminal';
 import { LoadingScreen } from './components/LoadingScreen';
+import { MapView } from './components/MapView';
 
 function App() {
   const [engine] = useState(() => new GameEngine());
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setIsLoadingMessage] = useState("Initializing...");
   const [history, setHistory] = useState<string[]>([]);
+  const [showMap, setShowMap] = useState(false);
 
   // To verify if initialization has run
   const initialized = useRef(false);
@@ -29,6 +31,12 @@ function App() {
   }, [engine]);
 
   const handleCommand = async (cmd: string) => {
+    // Check for map command to toggle graphical map
+    if (cmd.toLowerCase() === 'map' || cmd.toLowerCase() === 'location') {
+      setShowMap(true);
+      return;
+    }
+
     // Optimistic update
     const newHistory = [...engine.getHistory(), `> ${cmd}`];
     setHistory(newHistory);
@@ -44,12 +52,23 @@ function App() {
     return <LoadingScreen message={loadingMessage} />;
   }
 
+  const gameState = engine.getState();
+
   return (
-    <Terminal
-      history={history}
-      time={engine.getState().time}
-      onCommand={handleCommand}
-    />
+    <>
+      <Terminal
+        history={history}
+        time={gameState.time}
+        onCommand={handleCommand}
+      />
+      {showMap && (
+        <MapView
+          rooms={gameState.map}
+          currentRoomId={gameState.currentRoomId}
+          onClose={() => setShowMap(false)}
+        />
+      )}
+    </>
   );
 }
 

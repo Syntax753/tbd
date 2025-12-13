@@ -1,5 +1,6 @@
 import type { GameState, Character } from './types';
 import { ExecutiveDirector } from '../agents/ExecutiveDirector';
+import { colorName } from '../utils/colors';
 
 export class GameEngine {
     private state: GameState;
@@ -119,15 +120,7 @@ export class GameEngine {
             ];
             this.state.history.push(...lines);
         } else if (cmd === 'location' || cmd === 'map') {
-            const lines = ["*** MAP ***"];
-            Object.values(this.state.map).forEach(room => {
-                lines.push(`[${room.name}] (${room.id})`);
-                Object.entries(room.exits).forEach(([dir, targetId]) => {
-                    const targetName = this.state.map[targetId]?.name || targetId;
-                    lines.push(`  -> ${dir.toUpperCase()}: ${targetName}`);
-                });
-                lines.push(""); // spacer
-            });
+            const lines = this.generateAsciiMap();
             this.state.history.push(...lines);
         } else if (cmd === 'story') {
             const lines = [
@@ -192,14 +185,14 @@ export class GameEngine {
         // List characters
         const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room.id);
         if (charsHere.length > 0) {
-            const names = charsHere.map(c => `${c.name} is here.`).join(' ');
+            const names = charsHere.map(c => `${colorName(c.name)} is here.`).join(' ');
             desc += `\n\n${names}`;
 
             // Show current action if available
             charsHere.forEach(c => {
                 const currentEvent = this.getCurrentEvent(c.id);
                 if (currentEvent && currentEvent.locationId === room.id) {
-                    desc += `\n${c.name}: ${currentEvent.action}`;
+                    desc += `\n${colorName(c.name)}: ${currentEvent.action}`;
                 }
             });
         }
@@ -262,7 +255,7 @@ export class GameEngine {
             return msg;
         }
 
-        return `${target.name} says: "I didn't do it! I swear!" (${target.personality})`;
+        return `${colorName(target.name)} says: "I didn't do it! I swear!" (${target.personality})`;
     }
 
     private advanceTime(minutes: number) {
@@ -314,7 +307,7 @@ export class GameEngine {
                     // MESSAGING: Leaving Room
                     if (this.state.currentRoomId === oldRoomId) {
                         const direction = this.getDirection(oldRoomId, newRoomId);
-                        this.state.history.push(`${char.name} leaves to the ${direction?.toUpperCase()}.`);
+                        this.state.history.push(`${colorName(char.name)} leaves to the ${direction?.toUpperCase()}.`);
                     }
 
                     // EXECUTE MOVE
@@ -323,7 +316,7 @@ export class GameEngine {
                     // MESSAGING: Entering Room
                     if (this.state.currentRoomId === newRoomId) {
                         const direction = this.getDirection(newRoomId, oldRoomId); // Entered FROM
-                        this.state.history.push(`${char.name} enters from the ${direction?.toUpperCase()}.`);
+                        this.state.history.push(`${colorName(char.name)} enters from the ${direction?.toUpperCase()}.`);
                     }
                 }
             } else {
@@ -337,7 +330,7 @@ export class GameEngine {
                         const lastTime = this.lastAnnouncedTime[charId];
                         if (lastTime !== currentEvent.time) {
                             // "Reginald Jeeves: Arrives at Thorne Manor"
-                            this.state.history.push(`${char.name}: ${currentEvent.action}`);
+                            this.state.history.push(`${colorName(char.name)}: ${currentEvent.action}`);
                             this.lastAnnouncedTime[charId] = currentEvent.time;
                         }
                     }
@@ -428,5 +421,89 @@ export class GameEngine {
         const [h, m] = timeStr.split(':').map(Number);
         if (h === 0 && m === 0) return 24 * 60;
         return h * 60 + m;
+    }
+
+    private generateAsciiMap(): string[] {
+        const lines: string[] = ["*** MAP ***", ""];
+        const rooms = Object.values(this.state.map);
+
+        // Build adjacency info for layout
+        // For simplicity, we'll render rooms in a list format with visual connections
+        // A true grid layout would require coordinate assignment which is complex
+
+        const currentRoom = this.state.currentRoomId;
+        const BOX_WIDTH = 18;
+
+        // Helper to center text in box
+        const center = (text: string, width: number) => {
+            const pad = width - text.length;
+            const left = Math.floor(pad / 2);
+            const right = pad - left;
+            return ' '.repeat(left) + text + ' '.repeat(right);
+        };
+
+        // Helper to truncate and pad
+        const fit = (text: string, width: number) => {
+            if (text.length > width) return text.slice(0, width - 2) + '..';
+            return center(text, width);
+        };
+
+        // Render each room as a box with connections
+        rooms.forEach(room => {
+            const isHere = room.id === currentRoom;
+            const marker = isHere ? '[*]' : '   ';
+            const shortName = room.name.replace('The ', '').slice(0, 14);
+
+            // Build room box
+            const top = `┌${'─'.repeat(BOX_WIDTH)}┐`;
+            const mid = `│${fit(shortName, BOX_WIDTH)}│`;
+            const bottom = `└${'─'.repeat(BOX_WIDTH)}┘`;
+
+            // Connection indicators
+            const exits = room.exits;
+            const hasN = !!exits['north'];
+            const hasS = !!exits['south'];
+            const hasE = !!exits['east'];
+            const hasW = !!exits['west'];
+            const hasU = !!exits['up'];
+            const hasD = !!exits['down'];
+
+            // North connection
+            if (hasN) {
+                const targetName = this.state.map[exits['north']]?.name || exits['north'];
+                lines.push(`         ▲ N: ${targetName.slice(0, 12)}`);
+                lines.push(`         │`);
+            }
+
+            // Room box with East/West indicators
+            const westArrow = hasW ? `◄ W ──` : `      `;
+            const eastArrow = hasE ? `── E ►` : `      `;
+            const eastTarget = hasE ? ` ${(this.state.map[exits['east']]?.name || '').slice(0, 10)}` : '';
+            const westTarget = hasW ? `${(this.state.map[exits['west']]?.name || '').slice(0, 10)} ` : '';
+
+            lines.push(`${marker} ${top}`);
+            lines.push(`${westTarget.padStart(12)}${westArrow}${mid}${eastArrow}${eastTarget}`);
+            lines.push(`    ${bottom}`);
+
+            // South connection
+            if (hasS) {
+                lines.push(`         │`);
+                const targetName = this.state.map[exits['south']]?.name || exits['south'];
+                lines.push(`         ▼ S: ${targetName.slice(0, 12)}`);
+            }
+
+            // Up/Down indicators
+            if (hasU || hasD) {
+                let verticals = '    ';
+                if (hasU) verticals += `↑ Up: ${(this.state.map[exits['up']]?.name || '').slice(0, 10)}  `;
+                if (hasD) verticals += `↓ Down: ${(this.state.map[exits['down']]?.name || '').slice(0, 10)}`;
+                lines.push(verticals);
+            }
+
+            lines.push(""); // Spacer between rooms
+        });
+
+        lines.push("[*] = Your current location");
+        return lines;
     }
 }

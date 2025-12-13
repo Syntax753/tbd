@@ -141,3 +141,105 @@
   /* No borders/margins needed in flex row */
   white-space: nowrap;
 }
+
+/* Graphical Map Overlay */
+.map-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  cursor: pointer;
+}
+
+.map-container {
+  background: #0a0a0a;
+  border: 3px solid #0f0;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 95vw;
+  max-height: 90vh;
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+  cursor: default;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.map-header h2 {
+  color: #0f0;
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.map-close {
+  background: transparent;
+  border: 1px solid #0f0;
+  color: #0f0;
+  font-size: 1.2rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.map-close:hover {
+  background: #0f0;
+  color: #000;
+}
+
+.map-svg {
+  width: 100%;
+  height: auto;
+  min-height: 400px;
+}
+
+.map-connection {
+  stroke: #0f0;
+  stroke-width: 2;
+  stroke-opacity: 0.5;
+}
+
+.map-room {
+  fill: #1a1a1a;
+  stroke: #0f0;
+  stroke-width: 2;
+}
+
+.map-room-current {
+  fill: #0a2a0a;
+  stroke: #0f0;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px #0f0);
+}
+
+.map-room-text {
+  fill: #0f0;
+  font-size: 11px;
+  font-family: 'Courier New', Courier, monospace;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.map-you-marker {
+  fill: #ff0;
+  font-size: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  text-anchor: middle;
+  font-weight: bold;
+}
+
+.map-hint {
+  color: #666;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
