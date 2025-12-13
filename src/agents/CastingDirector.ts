@@ -62,9 +62,11 @@ export class CastingDirector extends Agent {
                 ]
             `;
 
+            console.log(`CastingDirector calls LLM with query ${prompt}`);
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+            console.log(`LLM replies with ${text}`);
             const specs = JSON.parse(text);
 
             this.cast = specs.map((spec: any, index: number) => ({

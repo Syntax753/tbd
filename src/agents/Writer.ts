@@ -65,13 +65,14 @@ export class Writer extends Agent {
                     background: string; // Context before game starts
                     intro: string; // The text shown when the game starts
                     plotAndSecrets: string[]; // Timeline of events and the solution
-                    characterSpecs: { name: string; role: string; personality: string; }[]; // List of 7-8 characters including the victim
                 }
             `;
 
+            console.log(`Writer calls LLM with query ${prompt}`);
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
+            console.log(`LLM replies with ${text}`);
 
             // Cleanup markdown code blocks if present
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();

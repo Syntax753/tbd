@@ -55,19 +55,19 @@ export class ExecutiveDirector extends Agent {
         if (onProgress) onProgress("The Writer is drafting the plot...");
 
         // Executive Director runs the production pipeline sequentially
-        console.log("Executive Director: 1. Commissioning Story...");
+        console.log("Executive Director calls Writer with generate_story");
         const story = await this.writer.work();
 
-        console.log("Executive Director: 2. Casting Characters...");
+        console.log("Executive Director calls Casting Director with generate_cast");
         if (onProgress) onProgress("The Casting Director is hiring 8 suspects...");
         const charactersList = await this.castingDirector.work(story);
 
-        console.log("Location Scout: 3. Scouting Location (based on cast)...");
+        console.log("Executive Director calls Location Scout with generate_location");
         if (onProgress) onProgress("The Location Scout is designing the manor...");
         // @ts-ignore
         const rooms = await this.locationScout.work(story, charactersList);
 
-        console.log("Scheduler: 4. Scheduling Events...");
+        console.log("Executive Director calls Scheduler with generate_schedule");
         if (onProgress) onProgress("The Scheduler is setting the scene...");
 
         // @ts-ignore

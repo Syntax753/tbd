@@ -111,8 +111,10 @@ export class Scheduler extends Agent {
                     }
                 `;
 
+                console.log(`Scheduler calls LLM with query ${prompt}`);
                 const result = await model.generateContent(prompt);
                 const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+                console.log(`LLM replies with ${text}`);
                 const dynamicSchedule = JSON.parse(text);
 
                 // Merge dynamic events

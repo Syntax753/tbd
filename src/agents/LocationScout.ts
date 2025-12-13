@@ -67,8 +67,10 @@ export class LocationScout extends Agent {
                     }
                 `;
 
+                console.log(`LocationScout calls LLM with query ${prompt}`);
                 const result = await model.generateContent(prompt);
                 const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+                console.log(`LLM replies with ${text}`);
                 extraRooms = JSON.parse(text);
                 console.log(`LocationScout: Added ${extraRooms.length} new rooms.`);
 
