@@ -151,8 +151,8 @@ export class ExecutiveDirector extends Agent {
         grafitti.initialize(map);
         grafitti.initializeCharacters(characters);
 
-        // Initialize Destiny with schedule and characters
-        this.destiny.initialize(schedule, characters);
+        // Initialize Destiny with schedule, characters, and scheduler reference
+        this.destiny.initialize(schedule, characters, this.scheduler);
 
         // Build initial history with intro and starting events (18:00)
         const initialHistory: string[] = [story.intro, ""];

@@ -214,6 +214,25 @@ export class Scheduler extends Agent {
     }
 
     /**
+     * Add a new event to a character's schedule (called by Destiny for spontaneous events).
+     * Inserts the event in chronological order.
+     */
+    addEvent(charId: string, time: string, action: string, locationId: string): boolean {
+        if (!this.cachedSchedule || !this.cachedSchedule[charId]) {
+            return false;
+        }
+
+        const newEvent = { time, action, locationId };
+        this.cachedSchedule[charId].push(newEvent);
+
+        // Sort by time to maintain order
+        this.cachedSchedule[charId].sort((a, b) => a.time.localeCompare(b.time));
+
+        console.log(`Scheduler: Added event for ${charId} at ${time} - ${action}`);
+        return true;
+    }
+
+    /**
      * Find the event the character should be heading towards.
      * Returns the most recent scheduled event at or before currentTime,
      * OR the next upcoming event if they need to be traveling.
