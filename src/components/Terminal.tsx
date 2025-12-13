@@ -38,14 +38,18 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, roomName, exi
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim()) return;
 
-        onCommand(input);
+        // Empty enter = wait command
+        const command = input.trim() || 'wait';
 
-        // Update history
-        const newHistory = [...cmdHistory, input];
-        setCmdHistory(newHistory);
-        setHistoryPtr(newHistory.length);
+        onCommand(command);
+
+        // Update history (only for non-empty actual input)
+        if (input.trim()) {
+            const newHistory = [...cmdHistory, input];
+            setCmdHistory(newHistory);
+            setHistoryPtr(newHistory.length);
+        }
 
         setInput('');
     };
@@ -99,8 +103,15 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, roomName, exi
         return parts.length > 0 ? parts : line;
     };
 
+    const handleContainerClick = () => {
+        // Focus input unless user is selecting text
+        const selection = window.getSelection();
+        if (selection && selection.toString().length > 0) return;
+        inputRef.current?.focus();
+    };
+
     return (
-        <div className="game-container">
+        <div className="game-container" onClick={handleContainerClick}>
             {/* Room Name Banner - Above CRT */}
             {roomName && (
                 <div className="room-name-banner">
@@ -112,7 +123,7 @@ export const Terminal: React.FC<TerminalProps> = ({ history, time, roomName, exi
             <div className="crt-monitor">
                 <div className="terminal-output">
                     {history.map((line, index) => (
-                        <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
+                        <div key={index} className="terminal-line" style={{ whiteSpace: 'pre-wrap', marginBottom: '4px' }}>
                             {renderLine(line)}
                         </div>
                     ))}

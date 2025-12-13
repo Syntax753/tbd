@@ -199,11 +199,13 @@ export class GameEngine {
             this.state.history.push(room.description);
         }
 
-        // 2. Blank line
-        this.state.history.push("");
+        // 2. Blank line between description and characters (only if there are characters)
+        const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room?.id);
+        if (charsHere.length > 0) {
+            this.state.history.push("");  // Blank line before character presence
+        }
 
         // 3. Characters and their actions
-        const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room?.id);
         if (charsHere.length > 0) {
             charsHere.forEach(c => {
                 const currentEvent = this.getCurrentEvent(c.id);
