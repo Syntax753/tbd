@@ -176,11 +176,8 @@ export class GameEngine {
         const room = this.state.map[this.state.currentRoomId];
         if (!room) return "You are in void.";
 
-        let desc = `[${room.name}]\n${room.description}`;
-
-        // List exits
-        const exits = Object.keys(room.exits).join(', ').toUpperCase();
-        desc += `\nExits: ${exits}`;
+        // Room name and exits are now shown in the UI, just show description
+        let desc = room.description;
 
         // List characters
         const charsHere = Object.values(this.state.characters).filter(c => c.currentRoomId === room.id);
