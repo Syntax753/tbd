@@ -16,7 +16,7 @@ export class LocationScout extends Agent {
 
     private genAI: GoogleGenerativeAI | null = null;
     constructor() {
-        super('Sarah', 'Location Scout');
+        super('Sarah', 'LocationScout');
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
@@ -25,10 +25,11 @@ export class LocationScout extends Agent {
         }
     }
 
-    async work(story: any, characters: any[]): Promise<Room[]> {
+    async work(_story: any, characters: any[]): Promise<Room[]> {
+        console.log("LocationScout: Reviewing script and starting room scouting...");
         // TEST MODE: Use hardcoded mansion if VITE_USE_TEST_DATA is set
         if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
-            console.log("LocationScout: Test Mode detected. Using test mansion layout.");
+            console.log("LocationScout -> TestData (Test Mode)");
             return this.getTestMansion();
         }
 
@@ -67,10 +68,10 @@ export class LocationScout extends Agent {
                     }
                 `;
 
-                console.log(`LocationScout calls LLM with query ${prompt}`);
+                console.log(`LocationScout -> LLM query ${prompt}`);
                 const result = await model.generateContent(prompt);
                 const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log(`LLM replies with ${text}`);
+                console.log(`LLM -> LocationScout response ${text}`);
                 extraRooms = JSON.parse(text);
                 console.log(`LocationScout: Added ${extraRooms.length} new rooms.`);
 

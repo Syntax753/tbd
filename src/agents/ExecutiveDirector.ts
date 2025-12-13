@@ -13,7 +13,7 @@ export class ExecutiveDirector extends Agent {
     private scheduler: Scheduler;
 
     constructor() {
-        super('Orson', 'Executive Director');
+        super('Orson', 'ExecutiveDirector');
         this.writer = new Writer();
         this.locationScout = new LocationScout();
         this.castingDirector = new CastingDirector();
@@ -30,7 +30,7 @@ export class ExecutiveDirector extends Agent {
 
     // A2A Router: Dispatch task to the right agent
     async dispatch(task: Task): Promise<any> {
-        console.log(`Executive Director: Dispatching task [${task.type}]...`);
+        console.log(`ExecutiveDirector: Dispatching task [${task.type}]...`);
 
         if (task.type === 'get_characters') {
             return this.castingDirector.handleTask({ ...task, type: 'fetch_characters' });
@@ -48,30 +48,30 @@ export class ExecutiveDirector extends Agent {
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {
-        console.log("Executive Director: Starting production...");
+        console.log("ExecutiveDirector: Starting production...");
 
-        // Phase 1: The Writer creates the story AND orchestrates the rest (A2A)
-        console.log("Phase 1: Commissioning the Writer...");
-        if (onProgress) onProgress("The Writer is drafting the plot...");
+        console.log("### Starting a new Production ###");
 
         // Executive Director runs the production pipeline sequentially
-        console.log("Executive Director calls Writer with generate_story");
+        console.log("ExecutiveDirector -> Writer<generate_story>");
+        if (onProgress) onProgress("The Writer is drafting the plot...");
         const story = await this.writer.work();
 
-        console.log("Executive Director calls Casting Director with generate_cast");
-        if (onProgress) onProgress("The Casting Director is hiring 8 suspects...");
+        console.log("ExecutiveDirector -> CastingDirector<generate_cast>");
+        if (onProgress) onProgress("The CastingDirector is hiring 8 suspects...");
         const charactersList = await this.castingDirector.work(story);
 
-        console.log("Executive Director calls Location Scout with generate_location");
-        if (onProgress) onProgress("The Location Scout is designing the manor...");
+        console.log("ExecutiveDirector -> LocationScout<generate_location>");
+        if (onProgress) onProgress("The LocationScout is designing the manor...");
         // @ts-ignore
         const rooms = await this.locationScout.work(story, charactersList);
 
-        console.log("Executive Director calls Scheduler with generate_schedule");
+        console.log("ExecutiveDirector -> Scheduler<generate_schedule>");
         if (onProgress) onProgress("The Scheduler is setting the scene...");
-
         // @ts-ignore
         const schedule = await this.scheduler.work(story, charactersList, rooms);
+
+        console.log("### End of Production ###");
 
         // Assemble the game state
         const map: Record<string, Room> = {};

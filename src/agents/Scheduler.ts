@@ -14,7 +14,7 @@ export class Scheduler extends Agent {
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
         } else {
-            console.warn("Scheduler: No Gemini API Key found. Using static schedule.");
+            console.warn("Scheduler -> TestData (No API Key)");
         }
     }
 
@@ -54,7 +54,7 @@ export class Scheduler extends Agent {
 
         // TEST MODE: Use hardcoded schedule if VITE_USE_TEST_DATA is set
         if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
-            console.log("Scheduler: Test Mode detected. Using refined test schedule.");
+            console.log("Scheduler -> TestData (Test Mode)");
             const dynamicSchedule = this.getTestSchedule();
 
             // Merge dynamic events
@@ -111,10 +111,10 @@ export class Scheduler extends Agent {
                     }
                 `;
 
-                console.log(`Scheduler calls LLM with query ${prompt}`);
+                console.log(`Scheduler -> LLM query ${prompt}`);
                 const result = await model.generateContent(prompt);
                 const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log(`LLM replies with ${text}`);
+                console.log(`LLM -> Scheduler response ${text}`);
                 const dynamicSchedule = JSON.parse(text);
 
                 // Merge dynamic events

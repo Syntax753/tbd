@@ -6,7 +6,7 @@ export class CastingDirector extends Agent {
     private cast: Character[] = [];
 
     constructor() {
-        super('Leo', 'Casting Director');
+        super('Leo', 'CastingDirector');
     }
 
     get agentCard(): AgentCard {
@@ -25,12 +25,12 @@ export class CastingDirector extends Agent {
     }
 
     async work(story: StoryManifest): Promise<Character[]> {
-        console.log("Casting Director: Reviewing script and auditing auditions...");
+        console.log("CastingDirector: Reviewing script and starting auditions...");
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // TEST MODE or NO API KEY: Use fallback cast
         if (import.meta.env.VITE_USE_TEST_DATA === 'true' || !import.meta.env.VITE_GEMINI_API_KEY) {
-            console.log("Casting Director: Using fallback cast.");
+            console.log("CastingDirector -> TestData (Test Mode)");
             this.cast = this.getFallbackCast();
             return this.cast;
         }
@@ -62,11 +62,11 @@ export class CastingDirector extends Agent {
                 ]
             `;
 
-            console.log(`CastingDirector calls LLM with query ${prompt}`);
+            console.log(`CastingDirector -> LLM query ${prompt}`);
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-            console.log(`LLM replies with ${text}`);
+            console.log(`LLM -> CastingDirector response ${text}`);
             const specs = JSON.parse(text);
 
             this.cast = specs.map((spec: any, index: number) => ({
@@ -77,10 +77,10 @@ export class CastingDirector extends Agent {
                 personality: spec.personality
             }));
 
-            console.log("Casting Director: Cast hired.");
+            console.log("CastingDirector: Cast hired.");
 
         } catch (error) {
-            console.error("Casting Director: Failed to generate cast. Using fallback.", error);
+            console.error("CastingDirector -> TestData (LLM Failed)", error);
             this.cast = this.getFallbackCast();
         }
 

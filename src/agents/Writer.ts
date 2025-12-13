@@ -34,7 +34,7 @@ export class Writer extends Agent {
     }
 
     async work(): Promise<StoryManifest> {
-        console.log("Writer: Consulting the digital muse (LLM)...");
+        console.log("Writer: Picks up the pen");
         const story = await this.generateStoryFromLLM();
         this.cachedStory = story;
         return story;
@@ -43,11 +43,12 @@ export class Writer extends Agent {
     private async generateStoryFromLLM(): Promise<StoryManifest> {
         // TEST MODE: Force fallback story if VITE_USE_TEST_DATA is set
         if (import.meta.env.VITE_USE_TEST_DATA === 'true') {
-            console.log("Writer: Test Mode detected. Using fallback story.");
+            console.log("Writer -> TestData (Test Mode)");
             return this.getFallbackStory();
         }
 
         if (!this.genAI) {
+            console.log("Writer -> TestData (No API Key)");
             return this.getFallbackStory();
         }
 
@@ -68,11 +69,11 @@ export class Writer extends Agent {
                 }
             `;
 
-            console.log(`Writer calls LLM with query ${prompt}`);
+            console.log(`Writer -> LLM query ${prompt}`);
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
-            console.log(`LLM replies with ${text}`);
+            console.log(`LLM -> Writer response ${text}`);
 
             // Cleanup markdown code blocks if present
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -81,7 +82,7 @@ export class Writer extends Agent {
             return story;
 
         } catch (error) {
-            console.error("Writer: Failed to generate story from Gemini.", error);
+            console.error("Writer -> TestData (LLM Failed)", error);
             return this.getFallbackStory();
         }
     }
