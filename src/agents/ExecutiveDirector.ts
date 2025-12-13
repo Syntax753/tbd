@@ -3,14 +3,17 @@ import { Writer } from './Writer';
 import { LocationScout } from './LocationScout';
 import { CastingDirector } from './CastingDirector';
 import { Scheduler } from './Scheduler';
+import { Destiny } from './Destiny';
 import type { AgentCard, Task } from '../engine/A2A';
 import type { GameState, Room, Character } from '../engine/types';
+import { grafitti } from '../engine/RoomGraph';
 
 export class ExecutiveDirector extends Agent {
     private writer: Writer;
     private locationScout: LocationScout;
     private castingDirector: CastingDirector;
     private scheduler: Scheduler;
+    private destiny: Destiny;
 
     constructor() {
         super('ExecutiveDirector', 'Orson');
@@ -18,6 +21,7 @@ export class ExecutiveDirector extends Agent {
         this.locationScout = new LocationScout();
         this.castingDirector = new CastingDirector();
         this.scheduler = new Scheduler();
+        this.destiny = new Destiny();
     }
 
     get agentCard(): AgentCard {
@@ -27,7 +31,8 @@ export class ExecutiveDirector extends Agent {
             description: 'Orchestrates all agents to produce a complete murder mystery',
             capabilities: [
                 { name: 'orchestrate', description: 'Runs the full production pipeline', outputType: 'GameState' },
-                { name: 'dispatch', description: 'Routes tasks to appropriate agents', inputType: 'Task', outputType: 'any' }
+                { name: 'dispatch', description: 'Routes tasks to appropriate agents', inputType: 'Task', outputType: 'any' },
+                { name: 'tick', description: 'Advances game time and updates character positions', inputType: 'string', outputType: 'string[]' }
             ]
         };
     }
@@ -48,7 +53,20 @@ export class ExecutiveDirector extends Agent {
             return this.scheduler.handleTask({ ...task, type: 'get_schedule' });
         }
 
+        if (task.type === 'tick') {
+            return this.tick(task.payload?.time, task.payload?.playerRoomId);
+        }
+
         return null;
+    }
+
+    /**
+     * Gameplay loop tick - called after each player turn.
+     * Updates character positions based on current time.
+     */
+    tick(currentTime: string, playerRoomId: string): string[] {
+        console.log(`ExecutiveDirector: Tick at ${currentTime}`);
+        return this.destiny.updatePositions(currentTime, playerRoomId);
     }
 
     async work(onProgress?: (msg: string) => void): Promise<Partial<GameState>> {
@@ -87,6 +105,13 @@ export class ExecutiveDirector extends Agent {
             char.currentRoomId = 'foyer';
             characters[char.id] = char;
         });
+
+        // Initialize Grafitti with rooms and characters
+        grafitti.initialize(map);
+        grafitti.initializeCharacters(characters);
+
+        // Initialize Destiny with schedule and characters
+        this.destiny.initialize(schedule, characters);
 
         return {
             story,

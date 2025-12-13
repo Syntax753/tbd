@@ -4,7 +4,7 @@ import { GameEngine } from './engine/GameEngine';
 import { Terminal } from './components/Terminal';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MapView } from './components/MapView';
-import { roomGraph } from './engine/RoomGraph';
+import { grafitti } from './engine/RoomGraph';
 
 function App() {
   const [engine] = useState(() => new GameEngine());
@@ -25,7 +25,7 @@ function App() {
       await engine.initialize((msg) => setIsLoadingMessage(msg));
 
       // Initialize room graph for pathfinding
-      roomGraph.initialize(engine.getState().map);
+      grafitti.initialize(engine.getState().map);
 
       setHistory(engine.getHistory());
       setIsLoading(false);
@@ -58,7 +58,7 @@ function App() {
 
   const gameState = engine.getState();
   const currentRoom = gameState.map[gameState.currentRoomId];
-  const exits = roomGraph.getExits(gameState.currentRoomId);
+  const exits = grafitti.getExits(gameState.currentRoomId);
 
   return (
     <>

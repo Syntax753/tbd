@@ -158,6 +158,19 @@ export class GameEngine {
             commandOutput = ["I don't understand that command."];
         }
 
+        // Call tick to update character positions based on current time
+        const movementMessages = await this.executive.dispatch({
+            id: 'tick',
+            type: 'tick',
+            status: 'submitted',
+            payload: { time: this.state.time, playerRoomId: this.state.currentRoomId }
+        });
+
+        // Add movement messages to output
+        if (movementMessages && movementMessages.length > 0) {
+            commandOutput = [...movementMessages, "", ...commandOutput];
+        }
+
         // Refresh display with the structured format
         this.refreshDisplay(commandOutput);
 

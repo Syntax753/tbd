@@ -1,12 +1,14 @@
-import type { Room } from './types';
+import type { Room, Character } from './types';
 
 /**
- * RoomGraph - Maintains a graph representation of rooms for pathfinding and validation.
- * This module provides a centralized way to query room connections and calculate paths.
+ * Grafitti - The world graph tracker.
+ * Maintains rooms, their connections, and character positions.
+ * Used for pathfinding, validation, and querying the game world state.
  */
-export class RoomGraph {
+export class Grafitti {
     private rooms: Map<string, Room> = new Map();
     private adjacency: Map<string, Map<string, string>> = new Map(); // roomId -> direction -> targetRoomId
+    private characterPositions: Map<string, string> = new Map(); // charId -> roomId
 
     /**
      * Initialize the graph with a set of rooms
@@ -21,6 +23,51 @@ export class RoomGraph {
             this.rooms.set(room.id, room);
             this.adjacency.set(room.id, new Map(Object.entries(room.exits)));
         });
+    }
+
+    /**
+     * Initialize character positions
+     */
+    initializeCharacters(characters: Record<string, Character> | Character[]) {
+        this.characterPositions.clear();
+        const charArray = Array.isArray(characters) ? characters : Object.values(characters);
+        charArray.forEach(char => {
+            this.characterPositions.set(char.id, char.currentRoomId || 'foyer');
+        });
+    }
+
+    /**
+     * Get character's current room
+     */
+    getCharacterRoom(charId: string): string | undefined {
+        return this.characterPositions.get(charId);
+    }
+
+    /**
+     * Move a character to a new room
+     */
+    moveCharacter(charId: string, newRoomId: string): boolean {
+        if (!this.rooms.has(newRoomId)) return false;
+        this.characterPositions.set(charId, newRoomId);
+        return true;
+    }
+
+    /**
+     * Get all characters in a room
+     */
+    getCharactersInRoom(roomId: string): string[] {
+        const chars: string[] = [];
+        this.characterPositions.forEach((room, charId) => {
+            if (room === roomId) chars.push(charId);
+        });
+        return chars;
+    }
+
+    /**
+     * Get all character positions
+     */
+    getAllCharacterPositions(): Map<string, string> {
+        return new Map(this.characterPositions);
     }
 
     /**
@@ -159,4 +206,4 @@ export class RoomGraph {
 }
 
 // Singleton instance
-export const roomGraph = new RoomGraph();
+export const grafitti = new Grafitti();
