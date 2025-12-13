@@ -46,6 +46,17 @@ export class Destiny extends Agent {
     }
 
     /**
+     * Pre-cache async LLM responses for all characters.
+     * Called at game start to ensure responses are ready before player asks.
+     */
+    prepareAllResponses(): void {
+        console.log("Destiny: Preparing async talk responses for all characters...");
+        Object.keys(this.characters).forEach(charId => {
+            this.queueResponseGeneration(charId);
+        });
+    }
+
+    /**
      * Handle A2A tasks
      */
     async handleTask(task: Task): Promise<any> {

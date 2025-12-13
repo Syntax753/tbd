@@ -166,9 +166,13 @@ export class GameEngine {
                     const charName = aboutMatch[1].trim();
                     const topic = aboutMatch[2].trim();
                     commandOutput = await this.handleTalkAbout(charName, topic);
+                    // Add player action in light grey
+                    commandOutput.unshift(`[[#888888:You question ${charName} about ${topic}...]]`);
                 } else {
                     // Simple talk - character introduction
                     commandOutput = await this.handleTalk(withoutTo);
+                    // Add player action in light grey
+                    commandOutput.unshift(`[[#888888:You approach ${withoutTo}...]]`);
                 }
             }
             this.advanceTime(5);

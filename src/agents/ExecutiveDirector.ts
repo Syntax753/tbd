@@ -96,10 +96,12 @@ export class ExecutiveDirector extends Agent {
             // Generate messages if player is in affected rooms
             if (playerRoomId === oldRoom) {
                 const destRoomName = grafitti.getRoom(nextStep)?.name || nextStep;
+                const direction = grafitti.getDirection(oldRoom, nextStep) || '';
+                const dirText = direction ? ` (${direction})` : '';
                 if (scheduledAction) {
-                    messages.push(`${colorName(move.charName)} heads to the ${destRoomName} to ${scheduledAction}.`);
+                    messages.push(`${colorName(move.charName)} heads towards the ${destRoomName}${dirText} to ${scheduledAction}.`);
                 } else {
-                    messages.push(`${colorName(move.charName)} leaves to the ${destRoomName}.`);
+                    messages.push(`${colorName(move.charName)} leaves towards the ${destRoomName}${dirText}.`);
                 }
             }
             if (playerRoomId === nextStep) {
@@ -220,10 +222,14 @@ export class ExecutiveDirector extends Agent {
         // Initialize Destiny with schedule, characters, and scheduler reference
         this.destiny.initialize(schedule, characters, this.scheduler);
 
+        // Pre-cache async LLM responses for all characters
+        console.log("ExecutiveDirector: Pre-caching talk responses for all characters...");
+        this.destiny.prepareAllResponses();
+
         // Build initial history with intro and starting events (18:00)
         const initialHistory: string[] = [story.intro, ""];
 
-        // Add 18:00 events for all characters
+        // Add 18:00 events for all characters and record them for memory
         Object.entries(schedule).forEach(([charId, events]) => {
             const char = characters[charId];
             if (!char) return;
@@ -232,6 +238,17 @@ export class ExecutiveDirector extends Agent {
             const startEvent = events.find(e => e.time === '18:00');
             if (startEvent) {
                 initialHistory.push(`${colorName(char.name)}: ${startEvent.action}`);
+
+                // Record this event in all other characters' memories (async LLM responses)
+                const roomName = map[startEvent.locationId]?.name || startEvent.locationId;
+                this.destiny.recordWitnessedEvent(
+                    charId,
+                    char.name,
+                    startEvent.action,
+                    startEvent.locationId,
+                    roomName,
+                    '18:00'
+                );
             }
         });
 
