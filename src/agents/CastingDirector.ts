@@ -59,7 +59,6 @@ export class CastingDirector extends Agent {
                 Plot: ${story.plotAndSecrets?.join('\n')}
                 
                 Create a diverse cast of suspects with unique personalities and motives.
-                
                 Respond ONLY with valid JSON matching this interface:
                 [
                     { 

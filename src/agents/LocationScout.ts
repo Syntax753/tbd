@@ -6,17 +6,17 @@ import type { AgentCard } from '../engine/A2A';
 export class LocationScout extends Agent {
 
 
-    get agentCard(): AgentCard {
-        return {
-            id: this.id,
-            persona: this.persona,
-            description: 'Designs the mansion layout and rooms',
-            capabilities: [
-                { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
-                { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
-            ]
-        };
-    }
+        get agentCard(): AgentCard {
+            return {
+                id: this.id,
+                persona: this.persona,
+                description: 'Designs the mansion layout and rooms',
+                capabilities: [
+                    { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
+                    { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
+                ]
+            };
+        }
 
     private genAI: GoogleGenerativeAI | null = null;
     private cachedRooms: Room[] = [];

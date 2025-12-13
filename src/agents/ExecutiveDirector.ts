@@ -158,8 +158,9 @@ export class ExecutiveDirector extends Agent {
         const story = await this.writer.work(useTestData);
 
         console.log("ExecutiveDirector -> CastingDirector<generate_cast>");
-        if (onProgress) onProgress("The CastingDirector is hiring 8 suspects...");
+        if (onProgress) onProgress("The CastingDirector is auditioning suspects...");
         const charactersList = await this.castingDirector.work(story, useTestData);
+        if (onProgress) onProgress(`The CastingDirector hired ${charactersList.length} suspects!`);
 
         console.log("ExecutiveDirector -> LocationScout<generate_location>");
         if (onProgress) onProgress("The LocationScout is designing the manor...");
