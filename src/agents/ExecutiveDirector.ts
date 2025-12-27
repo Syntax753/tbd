@@ -38,6 +38,11 @@ export class ExecutiveDirector extends Agent {
         };
     }
 
+    // A2A: Standardized task handler - routes to dispatch
+    async handleTask(task: Task): Promise<any> {
+        return this.dispatch(task);
+    }
+
     // A2A Router: Dispatch task to the right agent
     async dispatch(task: Task): Promise<any> {
         // Don't log tick tasks - too noisy
@@ -59,6 +64,13 @@ export class ExecutiveDirector extends Agent {
 
         if (task.type === 'tick') {
             return this.tick(task.payload?.time, task.payload?.playerRoomId, task.payload?.characters || {});
+        }
+
+        if (task.type === 'start_production') {
+            // A2A: ClientAgent sends config, ExecutiveDirector runs production
+            console.log(`ExecutiveDirector <- A2A Task: start_production`);
+            const { config, metaContext, onProgress } = task.payload || {};
+            return this.work(onProgress, config, metaContext);
         }
 
         return null;
@@ -171,10 +183,13 @@ export class ExecutiveDirector extends Agent {
         return this.destiny.getEventResponse(charId, memory);
     }
 
-    async work(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }): Promise<Partial<GameState>> {
+    async work(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }, metaContext?: { venueName?: string }): Promise<Partial<GameState>> {
         console.log("ExecutiveDirector: Starting production...");
         if (config) {
             console.log("ExecutiveDirector: Using player config:", config);
+        }
+        if (metaContext) {
+            console.log("ExecutiveDirector: Using meta context:", metaContext);
         }
 
         // Determine test mode from environment - this is the single source of truth
@@ -197,12 +212,12 @@ export class ExecutiveDirector extends Agent {
         if (onProgress) onProgress(`The CastingDirector hired ${charactersList.length} suspects!`);
 
         console.log("ExecutiveDirector -> LocationScout<generate_location>");
-        if (onProgress) onProgress("The LocationScout is designing the manor...");
-        const rooms = await this.locationScout.work(story, charactersList, useTestData);
+        if (onProgress) onProgress("The LocationScout is designing the world...");
+        const rooms = await this.locationScout.work(story, charactersList, useTestData, config?.storySetting);
 
         console.log("ExecutiveDirector -> Scheduler<generate_schedule>");
         if (onProgress) onProgress("The Scheduler is setting the scene...");
-        const schedule = await this.scheduler.work(story, charactersList, rooms, useTestData);
+        const schedule = await this.scheduler.work(story, charactersList, rooms, useTestData, metaContext?.venueName);
 
         console.log("### End of Production ###");
 

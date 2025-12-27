@@ -39,6 +39,9 @@ export class Writer extends Agent {
 
     async work(useTestData: boolean = false, storySetting?: string, characterTypes?: string, deceasedName?: string): Promise<StoryManifest> {
         console.log("Writer: Picks up the pen");
+        if (storySetting || characterTypes || deceasedName) {
+            console.log(`Writer: Config - Setting: "${storySetting}", Characters: "${characterTypes}", Deceased: "${deceasedName}"`);
+        }
         const story = await this.generateStoryFromLLM(useTestData, storySetting, characterTypes, deceasedName);
         this.cachedStory = story;
         return story;
@@ -100,7 +103,7 @@ export class Writer extends Agent {
     private getFallbackStory(): StoryManifest {
         return {
             title: "The Clockwork Inheritance",
-            background: "You are a free-lance detective. You received a mysterious invite to attend a dinner party by the wealthy Acrhibald Thorne.",
+            background: "You are a free-lance detective. You received a mysterious invite to attend a dinner party by the wealthy Archibald Thorne.",
             intro: "Archibald Thorne, a reclusive and immensely wealthy industrialist, invited a select group of family, close associates, and specialists to his sprawling, enigmatic Thorne Manor for a weekend gathering. The stated purpose was a 'celebration of life and legacy,' but rumors abounded that Archibald, known for his eccentricities and failing health, intended to make a significant announcement regarding his vast fortune and controversial will. The manor itself is a character, with its labyrinthine corridors, hidden passages, and a history as rich and shadowy as its owner's past. Guests arrived expecting revelations, but none could have foreseen the tragic events that would unfold.",
             plotAndSecrets: [
                 "*** CHRONICLE OF THE NIGHT ***",

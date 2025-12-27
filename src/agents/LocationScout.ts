@@ -10,9 +10,9 @@ export class LocationScout extends Agent {
         return {
             id: this.id,
             persona: this.persona,
-            description: 'Designs the mansion layout and rooms',
+            description: 'Designs the world layout and rooms based on story setting',
             capabilities: [
-                { name: 'generate_location', description: 'Creates rooms based on characters', inputType: 'Character[]', outputType: 'Room[]' },
+                { name: 'generate_location', description: 'Creates rooms based on setting and characters', inputType: 'Character[]', outputType: 'Room[]' },
                 { name: 'get_rooms', description: 'Returns cached rooms', outputType: 'Room[]' }
             ]
         };
@@ -38,69 +38,80 @@ export class LocationScout extends Agent {
         return null;
     }
 
-    async work(_story: any, characters: any[], useTestData: boolean = false): Promise<Room[]> {
+    async work(_story: any, characters: any[], useTestData: boolean = false, storySetting?: string): Promise<Room[]> {
         console.log("LocationScout: Reviewing script and starting room scouting...");
+        if (storySetting) {
+            console.log(`LocationScout: Setting - "${storySetting}"`);
+        }
+
         // TEST MODE: Use hardcoded mansion if useTestData is true
         if (useTestData) {
             console.log("LocationScout -> TestData (Test Mode)");
             return this.getTestMansion();
         }
 
-        console.log("LocationScout: Surveying the estate...");
+        console.log("LocationScout: Surveying the location...");
 
-        let extraRooms: Room[] = [];
+        const setting = storySetting || 'a grand mansion';
+        let rooms: Room[] = [];
 
         if (this.genAI && characters && characters.length > 0) {
             try {
-                console.log("LocationScout: Drafting new wings based on guest list...");
+                console.log("LocationScout: Designing rooms based on setting and characters...");
                 const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
                 const charSummaries = characters.map(c => `${c.name} (${c.role}): ${c.personality}`).join('\n');
 
                 const prompt = `
-                    You are an architect for a murder mystery game.
-                    The mansion has these existing rooms: Foyer, Dining Room, Kitchen, Living Room, Upper Landing, Guest Corridor.
+                    You are an architect for a murder mystery game set in: ${setting}
                     
-                    Based on the following characters, generate one unique rooms per character OTHER THAN that would fit their personalities or roles (e.g. a Library for a smart character, a Garden for a nature lover, a Lab for a doctor).
+                    Design a location with at least 6 rooms appropriate for this setting. Include:
+                    1. An ENTRY ROOM appropriate for the setting (e.g., "Beach Entrance", "Space Station Airlock", "Castle Gate") - this MUST have id "foyer"
+                    2. A DINING/EATING area (e.g., "Beach Bar", "Mess Hall", "Great Hall")
+                    3. A KITCHEN/FOOD PREP area for staff
+                    4. A GUEST QUARTERS/BEDROOM area
+                    5. A STAFF/SERVANT quarters
+                    6. At least 1-2 additional rooms that fit the setting and characters
                     
-                    IMPORTANT:
-                    1. Assign each new room a unique 'id' (lowercase, underscores).
-                    2. Provide a 'name' and atmospheric 'description'.
-                    3. Connect these new rooms to the existing rooms (Foyer, Living Room, Guest Corridor, etc) by specifying 'exits'.
-                    4. Ensure the connections make spatial sense (e.g. don't overwrite existing exits unless logical).
-                    
-                    Here are the characters:
+                    Characters to consider:
                     ${charSummaries}
-
+                    
+                    IMPORTANT RULES:
+                    1. Room names should fit the "${setting}" theme - NO generic "manor" or "mansion" names
+                    2. The entry room MUST have id "foyer" (but can have any name)
+                    3. All rooms must be connected via exits (north, south, east, west, up, down)
+                    4. Every exit must be bidirectional (if A connects to B, B must connect back to A)
+                    5. Descriptions should be atmospheric and fit the setting
+                    
                     Respond ONLY with a JSON array of Room objects:
                     interface Room {
-                        id: string;
-                        name: string;
+                        id: string;       // lowercase, underscores, "foyer" for entry
+                        name: string;     // Display name fitting the setting  
                         description: string;
                         exits: { [direction: string]: string }; // direction: room_id
                     }
                 `;
 
-                console.log(`LocationScout -> LLM query ${prompt}`);
+                console.log(`LocationScout -> LLM: Generating ${setting} layout`);
                 const result = await model.generateContent(prompt);
                 const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log(`LLM -> LocationScout response ${text}`);
-                extraRooms = JSON.parse(text);
-                console.log(`LocationScout: Added ${extraRooms.length} new rooms.`);
+                console.log(`LLM -> LocationScout: ${text.substring(0, 200)}...`);
+                rooms = JSON.parse(text);
+                console.log(`LocationScout: Created ${rooms.length} rooms for ${setting}`);
 
             } catch (err) {
-                console.warn("LocationScout: Failed to generate extra rooms.", err);
+                console.warn("LocationScout: Failed to generate rooms, using fallback.", err);
+                rooms = this.getTestMansion();
             }
+        } else {
+            rooms = this.getTestMansion();
         }
 
-        // Merge rooms: base mansion + LLM-generated rooms
-        let allRooms = [...this.getTestMansion(), ...extraRooms];
-
         // Comprehensive grid validation and auto-fix
-        allRooms = this.validateAndFixGrid(allRooms);
+        rooms = this.validateAndFixGrid(rooms);
 
-        this.cachedRooms = allRooms;
-        return allRooms;
+        this.cachedRooms = rooms;
+        return rooms;
     }
 
     /**

@@ -13,8 +13,8 @@ interface ConfigScreenProps {
 
 export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     const [config, setConfig] = useState<GameConfig>({
-        storySetting: '',
-        characterTypes: '',
+        storySetting: 'Beach',
+        characterTypes: 'Lord of the Rings',
         suspectCount: '5',
         deceasedName: 'Archibald'
     });
@@ -29,7 +29,7 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
 
     return (
         <div className="config-container">
-            <h1>THE MANSION MURDER MYSTERY</h1>
+            <h1>TBD MURDER</h1>
             <div className="config-subtitle">SYSTEM CONFIGURATION</div>
 
             <div className="config-form">

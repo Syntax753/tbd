@@ -1,14 +1,22 @@
 import type { GameState, Character } from './types';
 import { ExecutiveDirector } from '../agents/ExecutiveDirector';
+import { ClientAgent } from '../agents/ClientAgent';
+import type { GameConfig } from '../agents/ClientAgent';
 import { colorName } from '../utils/colors';
 
 export class GameEngine {
     private state: GameState;
     private executive: ExecutiveDirector;
+    private client: ClientAgent;
     private isInitialized: boolean = false;
 
     constructor() {
         this.executive = new ExecutiveDirector();
+        this.client = new ClientAgent();
+
+        // Wire up A2A: ClientAgent -> ExecutiveDirector
+        this.client.setExecutiveDirector(this.executive);
+
         // Default empty state
         this.state = {
             currentRoomId: '',
@@ -25,8 +33,14 @@ export class GameEngine {
 
     private lastAnnouncedTime: Record<string, string> = {};
 
-    async initialize(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }): Promise<void> {
-        const partialState = await this.executive.work(onProgress, config);
+    async initialize(onProgress?: (msg: string) => void, config?: GameConfig): Promise<void> {
+        // A2A Flow: ClientAgent receives config, dispatches to ExecutiveDirector
+        if (config) {
+            this.client.setConfig(config);
+        }
+
+        // ClientAgent dispatches start_production task to ExecutiveDirector
+        const partialState = await this.client.work(onProgress);
         this.state = {
             ...this.state,
             ...partialState,
@@ -564,87 +578,5 @@ export class GameEngine {
         return h * 60 + m;
     }
 
-    private generateAsciiMap(): string[] {
-        const lines: string[] = ["*** MAP ***", ""];
-        const rooms = Object.values(this.state.map);
 
-        // Build adjacency info for layout
-        // For simplicity, we'll render rooms in a list format with visual connections
-        // A true grid layout would require coordinate assignment which is complex
-
-        const currentRoom = this.state.currentRoomId;
-        const BOX_WIDTH = 18;
-
-        // Helper to center text in box
-        const center = (text: string, width: number) => {
-            const pad = width - text.length;
-            const left = Math.floor(pad / 2);
-            const right = pad - left;
-            return ' '.repeat(left) + text + ' '.repeat(right);
-        };
-
-        // Helper to truncate and pad
-        const fit = (text: string, width: number) => {
-            if (text.length > width) return text.slice(0, width - 2) + '..';
-            return center(text, width);
-        };
-
-        // Render each room as a box with connections
-        rooms.forEach(room => {
-            const isHere = room.id === currentRoom;
-            const marker = isHere ? '[*]' : '   ';
-            const shortName = room.name.replace('The ', '').slice(0, 14);
-
-            // Build room box
-            const top = `┌${'─'.repeat(BOX_WIDTH)}┐`;
-            const mid = `│${fit(shortName, BOX_WIDTH)}│`;
-            const bottom = `└${'─'.repeat(BOX_WIDTH)}┘`;
-
-            // Connection indicators
-            const exits = room.exits;
-            const hasN = !!exits['north'];
-            const hasS = !!exits['south'];
-            const hasE = !!exits['east'];
-            const hasW = !!exits['west'];
-            const hasU = !!exits['up'];
-            const hasD = !!exits['down'];
-
-            // North connection
-            if (hasN) {
-                const targetName = this.state.map[exits['north']]?.name || exits['north'];
-                lines.push(`         ▲ N: ${targetName.slice(0, 12)}`);
-                lines.push(`         │`);
-            }
-
-            // Room box with East/West indicators
-            const westArrow = hasW ? `◄ W ──` : `      `;
-            const eastArrow = hasE ? `── E ►` : `      `;
-            const eastTarget = hasE ? ` ${(this.state.map[exits['east']]?.name || '').slice(0, 10)}` : '';
-            const westTarget = hasW ? `${(this.state.map[exits['west']]?.name || '').slice(0, 10)} ` : '';
-
-            lines.push(`${marker} ${top}`);
-            lines.push(`${westTarget.padStart(12)}${westArrow}${mid}${eastArrow}${eastTarget}`);
-            lines.push(`    ${bottom}`);
-
-            // South connection
-            if (hasS) {
-                lines.push(`         │`);
-                const targetName = this.state.map[exits['south']]?.name || exits['south'];
-                lines.push(`         ▼ S: ${targetName.slice(0, 12)}`);
-            }
-
-            // Up/Down indicators
-            if (hasU || hasD) {
-                let verticals = '    ';
-                if (hasU) verticals += `↑ Up: ${(this.state.map[exits['up']]?.name || '').slice(0, 10)}  `;
-                if (hasD) verticals += `↓ Down: ${(this.state.map[exits['down']]?.name || '').slice(0, 10)}`;
-                lines.push(verticals);
-            }
-
-            lines.push(""); // Spacer between rooms
-        });
-
-        lines.push("[*] = Your current location");
-        return lines;
-    }
 }
