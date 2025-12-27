@@ -43,6 +43,8 @@ let messages: LLMMessages = {
 };
 
 let savedMessages: LLMMessages | null = null;
+let _connectionPromise: Promise<void> | null = null;
+let _generationQueue: Promise<string> = Promise.resolve('');
 
 function _clearConnectionAndThrow(message: string) {
     theConnection.webLLMEngine = null;
@@ -73,16 +75,34 @@ export function getConnectionModelId(): string {
 }
 
 export async function connect(modelId: string, onStatusUpdate: StatusUpdateCallback) {
+    // If already connecting, return existing promise
+    if (theConnection.state === LLMConnectionState.INITIALIZING && _connectionPromise) {
+        return _connectionPromise;
+    }
+
     if (isLlmConnected()) return;
+
     theConnection.state = LLMConnectionState.INITIALIZING;
     theConnection.modelId = modelId;
     const startLoadTime = Date.now();
-    if (!await webLlmConnect(theConnection.modelId, theConnection, onStatusUpdate)) {
-        updateModelDeviceLoadHistory(theConnection.modelId, false);
-        _clearConnectionAndThrow('Failed to connect to WebLLM.');
-    }
-    updateModelDeviceLoadHistory(theConnection.modelId, true, Date.now() - startLoadTime);
-    theConnection.state = LLMConnectionState.READY;
+
+    _connectionPromise = (async () => {
+        try {
+            if (!await webLlmConnect(theConnection.modelId, theConnection, onStatusUpdate)) {
+                updateModelDeviceLoadHistory(theConnection.modelId, false);
+                _clearConnectionAndThrow('Failed to connect to WebLLM.');
+            }
+            updateModelDeviceLoadHistory(theConnection.modelId, true, Date.now() - startLoadTime);
+            theConnection.state = LLMConnectionState.READY;
+        } catch (e) {
+            theConnection.state = LLMConnectionState.INIT_FAILED;
+            throw e;
+        } finally {
+            _connectionPromise = null;
+        }
+    })();
+
+    await _connectionPromise;
 }
 
 export function setSystemMessage(message: string | null) {
@@ -106,12 +126,35 @@ export function clearChatHistory() {
     messages.chatHistory = [];
 }
 
-export async function generate(prompt: string, onStatusUpdate: StatusUpdateCallback): Promise<string> {
+export function generate(prompt: string, onStatusUpdate: StatusUpdateCallback, historyMode: 'stateful' | 'stateless' = 'stateful'): Promise<string> {
+    // Serialization wrapper
+    const nextGen = _generationQueue.then(async () => {
+        return _generateInternal(prompt, onStatusUpdate, historyMode);
+    }).catch(e => {
+        console.error("LLM generaton error in queue", e);
+        throw e;
+    });
+
+    // @ts-ignore - mismatch boolean vs string promises, but we just need serialization
+    _generationQueue = nextGen.catch(() => '');
+    return nextGen;
+}
+
+async function _generateInternal(prompt: string, onStatusUpdate: StatusUpdateCallback, historyMode: 'stateful' | 'stateless'): Promise<string> {
     const cachedResponse = getCachedPromptResponse(prompt);
     if (cachedResponse) {
         onStatusUpdate(cachedResponse, 100);
         return cachedResponse;
     }
+
+    // Wait for initialization if needed
+    if (theConnection.state === LLMConnectionState.INITIALIZING && _connectionPromise) {
+        console.log("LLM is initializing... waiting.");
+        await _connectionPromise;
+    }
+
+    if (!isLlmConnected()) throw Error('LLM connection is not initialized.');
+    if (theConnection.state !== LLMConnectionState.READY) throw Error(`LLM is not in ready state (Current: ${theConnection.state}).`);
 
     let firstResponseTime = 0;
     function _captureFirstResponse(status: string, percentComplete: number) {
@@ -119,17 +162,27 @@ export async function generate(prompt: string, onStatusUpdate: StatusUpdateCallb
         onStatusUpdate(status, percentComplete);
     }
 
-    if (!isLlmConnected()) throw Error('LLM connection is not initialized.');
-    if (theConnection.state !== LLMConnectionState.READY) throw Error('LLM is not in ready state.');
     theConnection.state = LLMConnectionState.GENERATING;
     let message = '';
     let requestTime = Date.now();
-    switch (theConnection.connectionType) {
-        case LLMConnectionType.WEBLLM: message = await webLlmGenerate(theConnection, messages, prompt, _captureFirstResponse); break;
-        default: throw Error('Unexpected');
+    try {
+        switch (theConnection.connectionType) {
+            case LLMConnectionType.WEBLLM:
+                // Create a temporary empty history for stateless requests
+                const contextMessages = historyMode === 'stateless' ? {
+                    chatHistory: [],
+                    maxChatHistorySize: 100,
+                    systemMessage: null
+                } : messages;
+                message = await webLlmGenerate(theConnection, contextMessages, prompt, _captureFirstResponse);
+                break;
+            default: throw Error('Unexpected');
+        }
+    } finally {
+        theConnection.state = LLMConnectionState.READY;
     }
+
     updateModelDevicePerformanceHistory(theConnection.modelId, requestTime, firstResponseTime, Date.now(), _inputCharCount(prompt), message.length);
     setCachedPromptResponse(prompt, message);
-    theConnection.state = LLMConnectionState.READY;
     return message;
 }

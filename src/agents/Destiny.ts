@@ -303,7 +303,7 @@ Format: Return ONLY a JSON array of 3 strings, like ["response1", "response2", "
             let text = '';
 
             if (this.modelMode === 'offline') {
-                text = await generate(prompt, (_status) => { });
+                text = await generate(prompt, (_status) => { }, 'stateless');
             } else if (this.genAI) {
                 const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
                 const result = await model.generateContent(prompt);

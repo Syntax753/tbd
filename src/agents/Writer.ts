@@ -87,7 +87,7 @@ export class Writer extends Agent {
 
             if (modelMode === 'offline') {
                 const { generate } = await import('../llm/llmUtil');
-                text = await generate(prompt, (_status) => { });
+                text = await generate(prompt, (_status) => { }, 'stateless');
             } else {
                 // Online
                 const model = this.genAI!.getGenerativeModel({ model: "gemini-2.5-flash" });

@@ -19,7 +19,7 @@ function App() {
   const [showMap, setShowMap] = useState(false);
 
   // LLM Context
-  const { isOfflineMode, setOfflineMode, llmStatus, loadProgress, loadMessage } = useLLM();
+  const { isOfflineMode, setOfflineMode, llmStatus, loadProgress, loadMessage, initializeLLM } = useLLM();
 
   // To verify if initialization has run
   const initialized = useRef(false);
@@ -28,13 +28,19 @@ function App() {
     if (initialized.current) return;
     initialized.current = true;
 
+    setShowConfig(false);
+    setIsLoading(true);
+
     // Set offline mode in context
     if (config.modelMode === 'offline') {
       setOfflineMode(true);
+      // Wait for initialization to start/finish to ensure connection exists before agents run
+      try {
+        await initializeLLM();
+      } catch (e) {
+        console.error("Initialization failed, but proceeding to try engine (might allow retry)", e);
+      }
     }
-
-    setShowConfig(false);
-    setIsLoading(true);
 
     // Pass callback to update loading message and config
     await engine.initialize((msg) => setIsLoadingMessage(msg), {
