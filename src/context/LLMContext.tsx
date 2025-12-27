@@ -93,7 +93,8 @@ export const LLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         });
 
         // Append to queue (and catch errors to avoid breaking the chain for subsequent requests)
-        executionQueue.current = resultPromise.catch(() => { });
+        // Explicitly return void to satisfy the type definition
+        executionQueue.current = resultPromise.then(() => { }).catch(() => { });
 
         return resultPromise;
     };
