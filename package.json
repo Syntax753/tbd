@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@mlc-ai/web-llm": "^0.2.80",
+    "@mlc-ai/web-runtime": "^0.23.0-dev1",
+    "@mlc-ai/web-tokenizers": "^0.1.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

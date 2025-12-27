@@ -1,23 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Writer } from '../Writer';
 import { Scheduler } from '../Scheduler';
-import { CastingDirector } from '../CastingDirector';
-import { LocationScout } from '../LocationScout';
 import { ExecutiveDirector } from '../ExecutiveDirector';
 import type { Task } from '../../engine/A2A';
 
 describe('A2A Agent Network', () => {
     let writer: Writer;
     let scheduler: Scheduler;
-    let castingDirector: CastingDirector;
-    let locationScout: LocationScout;
     let executive: ExecutiveDirector;
 
     beforeEach(() => {
         writer = new Writer();
         scheduler = new Scheduler();
-        castingDirector = new CastingDirector();
-        locationScout = new LocationScout();
         executive = new ExecutiveDirector();
     });
 
@@ -29,21 +23,22 @@ describe('A2A Agent Network', () => {
             castingDirector: { work: () => Promise.resolve([]) } as any
         };
 
+        // @ts-ignore
         const result = await writer.work(mockServices);
-        expect(result.story.title).toContain("Clockwork");
+        expect(result.title).toContain("Clockwork");
 
         // Test Retrieval via A2A
         const task: Task = { id: '1', type: 'get_story', status: 'submitted' };
         const cachedStory = await writer.handleTask(task);
-        expect(cachedStory).toEqual(result.story);
+        expect(cachedStory).toEqual(result);
     });
 
     it('Scheduler generates a schedule and caches it', async () => {
-        // Mock CastingDirector
+        // Mock CastingDirector output (characters)
         const mockCast = [{ id: 'butler_1', name: 'Jeeves', role: 'Butler' }];
-        const mockCD = { getCast: () => Promise.resolve(mockCast) };
 
-        const schedule = await scheduler.work({} as any, mockCD);
+        // Pass mock data matching the new signature: (story, characters, rooms, useTestData)
+        const schedule = await scheduler.work({} as any, mockCast, [], true);
         expect(schedule['butler_1']).toBeDefined();
 
         // Test Retrieval via A2A

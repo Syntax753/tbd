@@ -6,6 +6,7 @@ export interface GameConfig {
     characterTypes: string;
     suspectCount: string;
     deceasedName: string;
+    modelMode: 'online' | 'offline';
 }
 
 export interface GameMetaContext {

@@ -38,7 +38,7 @@ export class LocationScout extends Agent {
         return null;
     }
 
-    async work(_story: any, characters: any[], useTestData: boolean = false, storySetting?: string): Promise<Room[]> {
+    async work(_story: any, characters: any[], useTestData: boolean = false, storySetting?: string, modelMode: 'online' | 'offline' = 'online'): Promise<Room[]> {
         console.log("LocationScout: Reviewing script and starting room scouting...");
         if (storySetting) {
             console.log(`LocationScout: Setting - "${storySetting}"`);
@@ -55,10 +55,9 @@ export class LocationScout extends Agent {
         const setting = storySetting || 'a grand mansion';
         let rooms: Room[] = [];
 
-        if (this.genAI && characters && characters.length > 0) {
+        if ((characters && characters.length > 0) && (modelMode === 'offline' || this.genAI)) {
             try {
                 console.log("LocationScout: Designing rooms based on setting and characters...");
-                const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
                 const charSummaries = characters.map(c => `${c.name} (${c.role}): ${c.personality}`).join('\n');
 
@@ -93,10 +92,20 @@ export class LocationScout extends Agent {
                 `;
 
                 console.log(`LocationScout -> LLM: Generating ${setting} layout`);
-                const result = await model.generateContent(prompt);
-                const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log(`LLM -> LocationScout: ${text.substring(0, 200)}...`);
-                rooms = JSON.parse(text);
+                let text = '';
+
+                if (modelMode === 'offline') {
+                    const { generate } = await import('../llm/llmUtil');
+                    text = await generate(prompt, (_status) => { });
+                } else {
+                    const model = this.genAI!.getGenerativeModel({ model: "gemini-2.5-flash" });
+                    const result = await model.generateContent(prompt);
+                    text = result.response.text();
+                }
+
+                const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                console.log(`LLM -> LocationScout: ${cleanText.substring(0, 200)}...`);
+                rooms = JSON.parse(cleanText);
                 console.log(`LocationScout: Created ${rooms.length} rooms for ${setting}`);
 
             } catch (err) {

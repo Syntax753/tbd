@@ -183,41 +183,38 @@ export class ExecutiveDirector extends Agent {
         return this.destiny.getEventResponse(charId, memory);
     }
 
-    async work(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string }, metaContext?: { venueName?: string }): Promise<Partial<GameState>> {
+    async work(onProgress?: (msg: string) => void, config?: { storySetting?: string; characterTypes?: string; suspectCount?: string; deceasedName?: string; modelMode?: 'online' | 'offline' }, metaContext?: { venueName?: string }): Promise<Partial<GameState>> {
         console.log("ExecutiveDirector: Starting production...");
         if (config) {
             console.log("ExecutiveDirector: Using player config:", config);
         }
-        if (metaContext) {
-            console.log("ExecutiveDirector: Using meta context:", metaContext);
-        }
+        console.log("ExecutiveDirector: Action!");
+        const useTestData = !config; // Simple heuristic for now, or pass explicit flag
+        const modelMode = config?.modelMode || 'online';
 
-        // Determine test mode from environment - this is the single source of truth
-        const useTestData = import.meta.env.VITE_USE_TEST_DATA === 'true';
-        if (useTestData) {
-            console.log("ExecutiveDirector: Running in TEST MODE");
-        }
+        // 1. Writer creates the story
+        if (onProgress) onProgress("Writer is drafting the screenplay...");
+        // @ts-ignore
+        const story = await this.writer.work(useTestData, config?.storySetting, config?.characterTypes, config?.deceasedName, modelMode);
 
-        console.log("### Starting a new Production ###");
+        // 2. Casting Director hires actors
+        if (onProgress) onProgress("Casting Director is auditing suspects...");
+        const count = config?.suspectCount ? parseInt(config.suspectCount) : 5;
+        // @ts-ignore
+        const charactersList = await this.castingDirector.work(story, useTestData, count, config?.characterTypes, modelMode);
 
-        // Executive Director runs the production pipeline sequentially
-        console.log("ExecutiveDirector -> Writer<generate_story>");
-        if (onProgress) onProgress("The Writer is drafting the plot...");
-        const story = await this.writer.work(useTestData, config?.storySetting, config?.characterTypes, config?.deceasedName);
+        // 3. Location Scout finds/designs the venue
+        if (onProgress) onProgress("Location Scout is securing the venue...");
+        // @ts-ignore
+        const venueName = metaContext?.venueName || 'Thorne Manor';
+        // @ts-ignore
+        // Fix: Update LocationScout signature to match usage or update usage
+        const rooms = await this.locationScout.work(story, charactersList, useTestData, config?.storySetting, modelMode);
 
-        console.log("ExecutiveDirector -> CastingDirector<generate_cast>");
-        if (onProgress) onProgress("The CastingDirector is auditioning suspects...");
-        const suspectCount = parseInt(config?.suspectCount || '5', 10) || 5;
-        const charactersList = await this.castingDirector.work(story, useTestData, suspectCount, config?.characterTypes);
-        if (onProgress) onProgress(`The CastingDirector hired ${charactersList.length} suspects!`);
-
-        console.log("ExecutiveDirector -> LocationScout<generate_location>");
-        if (onProgress) onProgress("The LocationScout is designing the world...");
-        const rooms = await this.locationScout.work(story, charactersList, useTestData, config?.storySetting);
-
-        console.log("ExecutiveDirector -> Scheduler<generate_schedule>");
-        if (onProgress) onProgress("The Scheduler is setting the scene...");
-        const schedule = await this.scheduler.work(story, charactersList, rooms, useTestData, metaContext?.venueName);
+        // 4. Scheduler plans the evening
+        if (onProgress) onProgress("Scheduler is coordinating the timeline...");
+        // @ts-ignore
+        const schedule = await this.scheduler.work(story, charactersList, rooms, useTestData, venueName, modelMode);
 
         console.log("### End of Production ###");
 
@@ -238,8 +235,8 @@ export class ExecutiveDirector extends Agent {
         grafitti.initialize(map);
         grafitti.initializeCharacters(characters);
 
-        // Initialize Destiny with schedule, characters, and scheduler reference
-        this.destiny.initialize(schedule, characters, this.scheduler);
+        // Initialize Destiny with schedule, characters, and scheduler reference, AND model mode
+        this.destiny.initialize(schedule, characters, this.scheduler, config?.modelMode || 'online');
 
         // Pre-cache async LLM responses for all characters
         console.log("ExecutiveDirector: Pre-caching talk responses for all characters...");

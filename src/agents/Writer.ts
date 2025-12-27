@@ -37,24 +37,24 @@ export class Writer extends Agent {
         };
     }
 
-    async work(useTestData: boolean = false, storySetting?: string, characterTypes?: string, deceasedName?: string): Promise<StoryManifest> {
+    async work(useTestData: boolean = false, storySetting?: string, characterTypes?: string, deceasedName?: string, modelMode: 'online' | 'offline' = 'online'): Promise<StoryManifest> {
         console.log("Writer: Picks up the pen");
         if (storySetting || characterTypes || deceasedName) {
             console.log(`Writer: Config - Setting: "${storySetting}", Characters: "${characterTypes}", Deceased: "${deceasedName}"`);
         }
-        const story = await this.generateStoryFromLLM(useTestData, storySetting, characterTypes, deceasedName);
+        const story = await this.generateStoryFromLLM(useTestData, storySetting, characterTypes, deceasedName, modelMode);
         this.cachedStory = story;
         return story;
     }
 
-    private async generateStoryFromLLM(useTestData: boolean, storySetting?: string, characterTypes?: string, deceasedName?: string): Promise<StoryManifest> {
+    private async generateStoryFromLLM(useTestData: boolean, storySetting?: string, characterTypes?: string, deceasedName?: string, modelMode: 'online' | 'offline' = 'online'): Promise<StoryManifest> {
         // TEST MODE: Force fallback story if useTestData is true
         if (useTestData) {
             console.log("Writer -> TestData (Test Mode)");
             return this.getFallbackStory();
         }
 
-        if (!this.genAI) {
+        if (modelMode === 'online' && !this.genAI) {
             console.log("Writer -> TestData (No API Key)");
             return this.getFallbackStory();
         }
@@ -64,28 +64,38 @@ export class Writer extends Agent {
         const charType = characterTypes || 'aristocrats and socialites';
         const victimName = deceasedName || 'Archibald Thorne';
 
-        try {
-            const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const prompt = `
-                You are a mystery writer. Create a murder mystery story manifest for a text adventure game.
-                The setting is ${setting}.
-                The characters should be ${charType}.
-                The host, ${victimName}, is found dead at midnight.
-                The game starts at 18:00.
-                
-                Respond ONLY with valid JSON matching this interface:
-                interface StoryManifest {
-                    title: string;
-                    background: string; // Context before game starts
-                    intro: string; // The text shown when the game starts
-                    plotAndSecrets: string[]; // Timeline of events and the solution
-                }
-            `;
+        // Prompt logic shared
+        const prompt = `
+            You are a mystery writer. Create a murder mystery story manifest for a text adventure game.
+            The setting is ${setting}.
+            The characters should be ${charType}.
+            The host, ${victimName}, is found dead at midnight.
+            The game starts at 18:00.
+            
+            Respond ONLY with valid JSON matching this interface:
+            interface StoryManifest {
+                title: string;
+                background: string; // Context before game starts
+                intro: string; // The text shown when the game starts
+                plotAndSecrets: string[]; // Timeline of events and the solution
+            }
+        `;
 
+        try {
             console.log(`Writer -> LLM query ${prompt}`);
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+            let text = '';
+
+            if (modelMode === 'offline') {
+                const { generate } = await import('../llm/llmUtil');
+                text = await generate(prompt, (_status) => { });
+            } else {
+                // Online
+                const model = this.genAI!.getGenerativeModel({ model: "gemini-2.5-flash" });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                text = response.text();
+            }
+
             console.log(`LLM -> Writer response ${text}`);
 
             // Cleanup markdown code blocks if present

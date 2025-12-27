@@ -5,6 +5,7 @@ export interface GameConfig {
     characterTypes: string;
     suspectCount: string;
     deceasedName: string;
+    modelMode: 'online' | 'offline';
 }
 
 interface ConfigScreenProps {
@@ -13,13 +14,14 @@ interface ConfigScreenProps {
 
 export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
     const [config, setConfig] = useState<GameConfig>({
-        storySetting: 'Beach',
-        characterTypes: 'Lord of the Rings',
+        storySetting: '',
+        characterTypes: '',
         suspectCount: '5',
-        deceasedName: 'Archibald'
+        deceasedName: 'Archibald',
+        modelMode: 'online'
     });
 
-    const handleChange = (field: keyof GameConfig) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (field: keyof GameConfig) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setConfig(prev => ({ ...prev, [field]: e.target.value }));
     };
 
@@ -75,6 +77,19 @@ export const ConfigScreen: React.FC<ConfigScreenProps> = ({ onStart }) => {
                         value={config.deceasedName}
                         onChange={handleChange('deceasedName')}
                     />
+                </div>
+
+                <div className="config-field">
+                    <label className="config-label">&gt; AI MODE:</label>
+                    <select
+                        className="config-input"
+                        value={config.modelMode}
+                        onChange={handleChange('modelMode')}
+                        style={{ fontFamily: 'monospace', cursor: 'pointer' }}
+                    >
+                        <option value="online">ONLINE (Cloud - Gemini)</option>
+                        <option value="offline">OFFLINE (Local - WebLLM)</option>
+                    </select>
                 </div>
             </div>
 

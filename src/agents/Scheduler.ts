@@ -44,7 +44,8 @@ export class Scheduler extends Agent {
         return this.cachedSchedule;
     }
 
-    async work(_story: StoryManifest, characters: any[], rooms: any[], useTestData: boolean = false, venueName?: string): Promise<Schedule> {
+    async work(_story: StoryManifest, characters: any[], rooms: any[], useTestData: boolean = false, venueName?: string, modelMode: 'online' | 'offline' = 'online'): Promise<Schedule> {
+        void _story;
         // Simulating "scheduling" based on the story
         await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -82,11 +83,10 @@ export class Scheduler extends Agent {
             schedule[char.id] = JSON.parse(JSON.stringify(baseTimeline));
         });
 
-        if (this.genAI && characters.length > 0) {
-            // FULL MODE: Use Gemini
+        if ((characters.length > 0) && (modelMode === 'offline' || this.genAI)) {
+            // FULL MODE: Use Gemini or Local LLM
             try {
                 console.log("Scheduler: Choreographing the night with AI...");
-                const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
                 const charInfos = characters.map(c => `${c.id} (${c.name}, ${c.role}): ${c.personality}`).join('\n');
                 const roomInfos = rooms.map(r => `${r.id} (${r.name}): ${r.description}`).join('\n');
@@ -130,10 +130,20 @@ export class Scheduler extends Agent {
                 `;
 
                 console.log(`Scheduler -> LLM query ${prompt}`);
-                const result = await model.generateContent(prompt);
-                const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log(`LLM -> Scheduler response ${text}`);
-                const dynamicSchedule = JSON.parse(text);
+                let text = '';
+
+                if (modelMode === 'offline') {
+                    const { generate } = await import('../llm/llmUtil');
+                    text = await generate(prompt, (_status) => { });
+                } else {
+                    const model = this.genAI!.getGenerativeModel({ model: "gemini-2.5-flash" });
+                    const result = await model.generateContent(prompt);
+                    text = result.response.text();
+                }
+
+                const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                console.log(`LLM -> Scheduler response ${cleanText}`);
+                const dynamicSchedule = JSON.parse(cleanText);
 
                 // Merge dynamic events
                 Object.entries(dynamicSchedule).forEach(([charId, events]) => {
